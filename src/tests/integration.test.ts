@@ -6,8 +6,21 @@ describe('PocketMQTT Integration Tests', () => {
   let app: PocketMQTT;
   const MQTT_PORT = 1883;
   const API_PORT = 3000;
+  const testDeviceId = 'integration-test-device';
+  const testDeviceToken = 'integration-test-token';
 
   beforeAll(async () => {
+    const prisma = (await import('../database.js')).getPrismaClient();
+    
+    // Clean up and create test device token
+    await prisma.deviceToken.deleteMany();
+    await prisma.deviceToken.create({
+      data: {
+        deviceId: testDeviceId,
+        token: testDeviceToken
+      }
+    });
+    
     // Initialize PocketMQTT with both services
     app = new PocketMQTT({
       mqttPort: MQTT_PORT,
@@ -17,12 +30,17 @@ describe('PocketMQTT Integration Tests', () => {
   });
 
   afterAll(async () => {
+    const prisma = (await import('../database.js')).getPrismaClient();
+    await prisma.deviceToken.deleteMany();
     await app.stop();
   });
 
   it('should start Aedes MQTT broker on port 1883', async () => {
     // Create an MQTT client to test connection
-    const client = connect(`mqtt://localhost:${MQTT_PORT}`);
+    const client = connect(`mqtt://localhost:${MQTT_PORT}`, {
+      username: testDeviceId,
+      password: testDeviceToken
+    });
     
     await new Promise<void>((resolve, reject) => {
       client.on('connect', () => {
@@ -52,7 +70,10 @@ describe('PocketMQTT Integration Tests', () => {
 
   it('should have both MQTT broker and API running simultaneously', async () => {
     // Connect MQTT client
-    const mqttClient = connect(`mqtt://localhost:${MQTT_PORT}`);
+    const mqttClient = connect(`mqtt://localhost:${MQTT_PORT}`, {
+      username: testDeviceId,
+      password: testDeviceToken
+    });
     
     const mqttConnected = new Promise<void>((resolve, reject) => {
       mqttClient.on('connect', () => resolve());

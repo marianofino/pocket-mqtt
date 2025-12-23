@@ -1,15 +1,18 @@
 import Aedes from 'aedes';
+import type { AuthenticateError, Client } from 'aedes';
 import { createServer } from 'net';
 import Fastify from 'fastify';
-import type { FastifyInstance } from 'fastify';
+import fastifyJwt from '@fastify/jwt';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { Server as NetServer } from 'net';
 import { TelemetryService } from './services/TelemetryService.js';
-import { disconnectPrisma } from './database.js';
+import { disconnectPrisma, getPrismaClient } from './database.js';
 
 export interface PocketMQTTConfig {
   mqttPort?: number;
   apiPort?: number;
   apiHost?: string;
+  jwtSecret?: string;
 }
 
 export class PocketMQTT {
@@ -21,17 +24,22 @@ export class PocketMQTT {
   private fastify: FastifyInstance;
   private telemetryService: TelemetryService;
   private readonly maxPayloadSize = 64 * 1024; // 64KB max payload size
+  private jwtSecret: string;
 
   constructor(config: PocketMQTTConfig = {}) {
     this.mqttPort = config.mqttPort ?? 1883;
     this.apiPort = config.apiPort ?? 3000;
     this.apiHost = config.apiHost ?? '127.0.0.1';
+    this.jwtSecret = config.jwtSecret ?? process.env.JWT_SECRET ?? 'default-secret-change-in-production';
     
     // Initialize Aedes MQTT broker
     this.aedes = new Aedes();
     
     // Initialize Telemetry service
     this.telemetryService = new TelemetryService();
+    
+    // Setup MQTT authentication hooks
+    this.setupMQTTAuthentication();
     
     // Hook into MQTT publish events to buffer telemetry
     this.setupMQTTHandlers();
@@ -41,7 +49,63 @@ export class PocketMQTT {
       logger: true
     });
     
+    // Setup JWT authentication
+    this.setupJWT();
+    
     this.setupRoutes();
+  }
+
+  private setupMQTTAuthentication(): void {
+    const prisma = getPrismaClient();
+    
+    // Authenticate hook - validates device tokens on connection
+    this.aedes.authenticate = async (client: Client, username: string | undefined, password: Buffer | undefined, callback: (error: AuthenticateError | null, success: boolean) => void) => {
+      // Allow connections without credentials for backward compatibility during testing
+      // In production, you might want to enforce authentication
+      if (!username || !password) {
+        callback(null, false);
+        return;
+      }
+
+      try {
+        const token = password.toString();
+        
+        // Look up device token in database
+        const deviceToken = await prisma.deviceToken.findUnique({
+          where: { token }
+        });
+
+        if (!deviceToken) {
+          callback(null, false);
+          return;
+        }
+
+        // Check if token matches the device ID
+        if (deviceToken.deviceId !== username) {
+          callback(null, false);
+          return;
+        }
+
+        // Check if token is expired
+        if (deviceToken.expiresAt && deviceToken.expiresAt < new Date()) {
+          callback(null, false);
+          return;
+        }
+
+        // Authentication successful
+        callback(null, true);
+      } catch (error) {
+        console.error('MQTT authentication error:', error);
+        callback(null, false);
+      }
+    };
+
+    // Authorize publish hook - validates device can publish to topic
+    this.aedes.authorizePublish = async (client: Client | null, packet: any, callback: (error?: Error | null) => void) => {
+      // Allow publish if client is authenticated
+      // Additional authorization logic could be added here (e.g., topic-based permissions)
+      callback(null);
+    };
   }
 
   private setupMQTTHandlers(): void {
@@ -70,14 +134,46 @@ export class PocketMQTT {
     });
   }
 
+  private setupJWT(): void {
+    // Register JWT plugin
+    this.fastify.register(fastifyJwt, {
+      secret: this.jwtSecret
+    });
+
+    // Add authentication decorator
+    this.fastify.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        reply.code(401).send({ error: 'Unauthorized' });
+      }
+    });
+  }
+
   private setupRoutes(): void {
-    // Health check endpoint
+    // Health check endpoint - public (no authentication)
     this.fastify.get('/health', async () => {
       return { status: 'ok' };
     });
 
-    // POST /api/v1/telemetry - Submit telemetry data
-    this.fastify.post('/api/v1/telemetry', async (request, reply) => {
+    // Login endpoint - public (generates JWT tokens)
+    this.fastify.post('/api/v1/auth/login', async (request, reply) => {
+      const body = request.body as { username: string; password: string } | undefined;
+      const { username, password } = body ?? {};
+      
+      // Simple demo authentication (in production, use proper user management)
+      if (username === 'admin' && password === 'admin123') {
+        const token = this.fastify.jwt.sign({ username }, { expiresIn: '1h' });
+        return { token };
+      }
+      
+      reply.code(401).send({ error: 'Invalid credentials' });
+    });
+
+    // POST /api/v1/telemetry - Submit telemetry data (protected)
+    this.fastify.post('/api/v1/telemetry', {
+      onRequest: [this.fastify.authenticate]
+    }, async (request, reply) => {
       const body = request.body as { topic: string; payload: string } | undefined;
       const { topic, payload } = body ?? {};
       
@@ -104,8 +200,10 @@ export class PocketMQTT {
       return { success: true, message: 'Telemetry data buffered' };
     });
 
-    // GET /api/v1/telemetry - Retrieve telemetry data
-    this.fastify.get('/api/v1/telemetry', async (request, reply) => {
+    // GET /api/v1/telemetry - Retrieve telemetry data (protected)
+    this.fastify.get('/api/v1/telemetry', {
+      onRequest: [this.fastify.authenticate]
+    }, async (request, reply) => {
       const query = request.query as { topic?: string; limit?: string; offset?: string };
       
       const MAX_LIMIT = 1000;
