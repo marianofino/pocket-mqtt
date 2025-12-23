@@ -67,7 +67,7 @@ export class PocketMQTT {
     const prisma = getPrismaClient();
     
     // Authenticate hook - validates device tokens on connection
-    this.aedes.authenticate = async (client: Client, username: string | undefined, password: Buffer | undefined, callback: (error: AuthenticateError | null, success: boolean) => void) => {
+    this.aedes.authenticate = async (_client: Client, username: string | undefined, password: Buffer | undefined, callback: (error: AuthenticateError | null, success: boolean) => void) => {
       // Reject connections without credentials
       if (!username || !password) {
         callback(null, false);
@@ -108,7 +108,7 @@ export class PocketMQTT {
     };
 
     // Authorize publish hook - validates device can publish to topic
-    this.aedes.authorizePublish = async (client: Client | null, packet: any, callback: (error?: Error | null) => void) => {
+    this.aedes.authorizePublish = async (_client: Client | null, _packet: any, callback: (error?: Error | null) => void) => {
       // Allow publish if client is authenticated
       // Additional authorization logic could be added here (e.g., topic-based permissions)
       callback(null);
@@ -117,7 +117,7 @@ export class PocketMQTT {
 
   private setupMQTTHandlers(): void {
     // Listen to published messages and buffer them for telemetry
-    this.aedes.on('publish', (packet, client) => {
+    this.aedes.on('publish', (packet, _client) => {
       // Skip system topics (starting with $)
       if (packet.topic.startsWith('$')) {
         return;
@@ -164,7 +164,7 @@ export class PocketMQTT {
     });
 
     // Login endpoint - public (generates JWT tokens)
-    this.fastify.post('/api/v1/auth/login', async (request, reply) => {
+    this.fastify.post('/api/v1/auth/login', async (request, reply): Promise<{ token: string } | void> => {
       const body = request.body as { username: string; password: string } | undefined;
       const { username, password } = body ?? {};
       
@@ -178,7 +178,7 @@ export class PocketMQTT {
         return { token };
       }
       
-      reply.code(401).send({ error: 'Invalid credentials' });
+      return reply.code(401).send({ error: 'Invalid credentials' });
     });
 
     // POST /api/v1/telemetry - Submit telemetry data (protected)
