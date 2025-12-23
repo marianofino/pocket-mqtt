@@ -7,11 +7,13 @@ import type { Server as NetServer } from 'net';
 export interface PocketMQTTConfig {
   mqttPort?: number;
   apiPort?: number;
+  apiHost?: string;
 }
 
 export class PocketMQTT {
   private mqttPort: number;
   private apiPort: number;
+  private apiHost: string;
   private aedes: Aedes;
   private mqttServer: NetServer | null = null;
   private fastify: FastifyInstance;
@@ -19,6 +21,7 @@ export class PocketMQTT {
   constructor(config: PocketMQTTConfig = {}) {
     this.mqttPort = config.mqttPort ?? 1883;
     this.apiPort = config.apiPort ?? 3000;
+    this.apiHost = config.apiHost ?? '127.0.0.1';
     
     // Initialize Aedes MQTT broker
     this.aedes = new Aedes();
@@ -63,8 +66,8 @@ export class PocketMQTT {
 
   private async startAPI(): Promise<void> {
     try {
-      await this.fastify.listen({ port: this.apiPort, host: '0.0.0.0' });
-      console.log(`Fastify API listening on port ${this.apiPort}`);
+      await this.fastify.listen({ port: this.apiPort, host: this.apiHost });
+      console.log(`Fastify API listening on ${this.apiHost}:${this.apiPort}`);
     } catch (err) {
       throw err;
     }
@@ -93,7 +96,13 @@ export class PocketMQTT {
 }
 
 // Main entry point for direct execution
-if (import.meta.url === `file://${process.argv[1]}`) {
+import { fileURLToPath } from 'url';
+import { resolve } from 'path';
+
+const currentFile = fileURLToPath(import.meta.url);
+const mainFile = resolve(process.argv[1]);
+
+if (currentFile === mainFile) {
   const app = new PocketMQTT();
   
   app.start().catch((err) => {
