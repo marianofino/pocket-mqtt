@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { TelemetryService } from '../services/TelemetryService.js';
 import { getPrismaClient, disconnectPrisma } from '../database.js';
 
