@@ -69,7 +69,11 @@ export class PocketMQTT {
       await this.fastify.listen({ port: this.apiPort, host: this.apiHost });
       console.log(`Fastify API listening on ${this.apiHost}:${this.apiPort}`);
     } catch (err) {
-      throw err;
+      const message = `Failed to start Fastify API on ${this.apiHost}:${this.apiPort}`;
+      if (err instanceof Error) {
+        throw new Error(message, { cause: err });
+      }
+      throw new Error(`${message}: ${String(err)}`);
     }
   }
 
