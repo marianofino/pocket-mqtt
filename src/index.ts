@@ -3,6 +3,8 @@ import { createServer } from 'net';
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
 import type { Server as NetServer } from 'net';
+import { TelemetryService } from './services/TelemetryService.js';
+import { disconnectPrisma } from './database.js';
 
 export interface PocketMQTTConfig {
   mqttPort?: number;
@@ -17,6 +19,8 @@ export class PocketMQTT {
   private aedes: Aedes;
   private mqttServer: NetServer | null = null;
   private fastify: FastifyInstance;
+  private telemetryService: TelemetryService;
+  private readonly maxPayloadSize = 64 * 1024; // 64KB max payload size
 
   constructor(config: PocketMQTTConfig = {}) {
     this.mqttPort = config.mqttPort ?? 1883;
@@ -26,6 +30,12 @@ export class PocketMQTT {
     // Initialize Aedes MQTT broker
     this.aedes = new Aedes();
     
+    // Initialize Telemetry service
+    this.telemetryService = new TelemetryService();
+    
+    // Hook into MQTT publish events to buffer telemetry
+    this.setupMQTTHandlers();
+    
     // Initialize Fastify API
     this.fastify = Fastify({
       logger: true
@@ -34,10 +44,112 @@ export class PocketMQTT {
     this.setupRoutes();
   }
 
+  private setupMQTTHandlers(): void {
+    // Listen to published messages and buffer them for telemetry
+    this.aedes.on('publish', (packet, client) => {
+      // Skip system topics (starting with $)
+      if (packet.topic.startsWith('$')) {
+        return;
+      }
+      
+      // Validate payload size to prevent memory issues
+      const payloadSize = packet.payload.length;
+      if (payloadSize > this.maxPayloadSize) {
+        console.warn(`Rejected MQTT message on topic ${packet.topic}: payload size ${payloadSize} exceeds max ${this.maxPayloadSize}`);
+        return;
+      }
+      
+      // Buffer the message for batch writing (fire and forget for performance)
+      this.telemetryService.addMessage(
+        packet.topic,
+        packet.payload.toString()
+      ).catch(err => {
+        // Log errors but don't block MQTT message flow
+        console.error('Error buffering telemetry message:', err);
+      });
+    });
+  }
+
   private setupRoutes(): void {
     // Health check endpoint
     this.fastify.get('/health', async () => {
       return { status: 'ok' };
+    });
+
+    // POST /api/v1/telemetry - Submit telemetry data
+    this.fastify.post('/api/v1/telemetry', async (request, reply) => {
+      const body = request.body as { topic: string; payload: string } | undefined;
+      const { topic, payload } = body ?? {};
+      
+      // Stricter validation for empty strings
+      if (
+        typeof topic !== 'string' ||
+        topic.trim().length === 0 ||
+        typeof payload !== 'string' ||
+        payload.trim().length === 0
+      ) {
+        reply.code(400).send({ error: 'topic and payload must be non-empty strings' });
+        return;
+      }
+
+      // Validate payload size to prevent memory exhaustion
+      const payloadSize = Buffer.byteLength(payload, 'utf8');
+      if (payloadSize > this.maxPayloadSize) {
+        reply.code(400).send({ error: `payload size ${payloadSize} exceeds maximum ${this.maxPayloadSize} bytes` });
+        return;
+      }
+
+      await this.telemetryService.addMessage(topic, payload);
+      
+      return { success: true, message: 'Telemetry data buffered' };
+    });
+
+    // GET /api/v1/telemetry - Retrieve telemetry data
+    this.fastify.get('/api/v1/telemetry', async (request, reply) => {
+      const query = request.query as { topic?: string; limit?: string; offset?: string };
+      
+      const MAX_LIMIT = 1000;
+      
+      let limit = 100;
+      if (query.limit !== undefined) {
+        const parsedLimit = parseInt(query.limit, 10);
+        if (Number.isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > MAX_LIMIT) {
+          reply.code(400).send({ error: `limit must be an integer between 1 and ${MAX_LIMIT}` });
+          return;
+        }
+        limit = parsedLimit;
+      }
+
+      let offset = 0;
+      if (query.offset !== undefined) {
+        const parsedOffset = parseInt(query.offset, 10);
+        if (Number.isNaN(parsedOffset) || parsedOffset < 0) {
+          reply.code(400).send({ error: 'offset must be a non-negative integer' });
+          return;
+        }
+        offset = parsedOffset;
+      }
+      const prisma = this.telemetryService.getPrisma();
+      
+      const where = query.topic ? { topic: query.topic } : {};
+      
+      const telemetry = await prisma.telemetry.findMany({
+        where,
+        orderBy: { timestamp: 'desc' },
+        take: limit,
+        skip: offset,
+      });
+
+      const total = await prisma.telemetry.count({ where });
+
+      return {
+        data: telemetry,
+        pagination: {
+          total,
+          limit,
+          offset,
+        },
+      };
     });
   }
 
@@ -80,6 +192,13 @@ export class PocketMQTT {
   async stop(): Promise<void> {
     const errors: Error[] = [];
 
+    // Stop telemetry service first (flushes any pending messages)
+    try {
+      await this.telemetryService.stop();
+    } catch (err) {
+      errors.push(err instanceof Error ? err : new Error(String(err)));
+    }
+
     // Close Fastify API
     try {
       await this.fastify.close();
@@ -108,6 +227,13 @@ export class PocketMQTT {
           resolve();
         });
       });
+    } catch (err) {
+      errors.push(err instanceof Error ? err : new Error(String(err)));
+    }
+
+    // Disconnect Prisma
+    try {
+      await disconnectPrisma();
     } catch (err) {
       errors.push(err instanceof Error ? err : new Error(String(err)));
     }

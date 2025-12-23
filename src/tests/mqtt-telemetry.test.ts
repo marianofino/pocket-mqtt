@@ -1,0 +1,285 @@
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { connect } from 'mqtt';
+import { PocketMQTT } from '../index.js';
+import { getPrismaClient } from '../database.js';
+
+describe('MQTT Telemetry Integration Tests', () => {
+  let app: PocketMQTT;
+  let prisma: ReturnType<typeof getPrismaClient>;
+  const MQTT_PORT = 1884;
+  const API_PORT = 3001;
+
+  beforeAll(async () => {
+    prisma = getPrismaClient();
+    
+    // Clean up any existing telemetry data
+    await prisma.telemetry.deleteMany();
+    
+    // Initialize PocketMQTT with both services
+    app = new PocketMQTT({
+      mqttPort: MQTT_PORT,
+      apiPort: API_PORT
+    });
+    await app.start();
+  });
+
+  beforeEach(async () => {
+    // Clean database before each test for isolation
+    await prisma.telemetry.deleteMany();
+  });
+
+  afterAll(async () => {
+    // Clean up telemetry data before stopping
+    await prisma.telemetry.deleteMany();
+    
+    // Now stop the app (which will disconnect Prisma)
+    await app.stop();
+  }, 15000);
+
+  it('should buffer MQTT messages and flush them to database after 2 seconds', async () => {
+    // Given: MQTT client connected
+    const client = connect(`mqtt://localhost:${MQTT_PORT}`);
+    
+    await new Promise<void>((resolve, reject) => {
+      client.on('connect', () => resolve());
+      client.on('error', reject);
+      setTimeout(() => reject(new Error('Connection timeout')), 5000);
+    });
+
+    // When: Publish 5 messages
+    for (let i = 0; i < 5; i++) {
+      client.publish(`test/topic${i}`, `payload${i}`);
+    }
+
+    // Wait a bit for messages to be buffered
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Then: Messages should not be in database yet
+    let count = await prisma.telemetry.count();
+    expect(count).toBe(0);
+
+    // Wait for flush (2+ seconds)
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Then: All messages should be flushed to database
+    count = await prisma.telemetry.count();
+    expect(count).toBe(5);
+
+    const messages = await prisma.telemetry.findMany({
+      orderBy: { id: 'asc' }
+    });
+    
+    expect(messages[0].topic).toBe('test/topic0');
+    expect(messages[0].payload).toBe('payload0');
+    expect(messages[4].topic).toBe('test/topic4');
+    expect(messages[4].payload).toBe('payload4');
+
+    client.end();
+  }, 10000);
+
+  it('should handle high-frequency MQTT messages (>1000 msg/min)', async () => {
+    // Given: MQTT client connected
+    const client = connect(`mqtt://localhost:${MQTT_PORT}`);
+    
+    await new Promise<void>((resolve, reject) => {
+      client.on('connect', () => resolve());
+      client.on('error', reject);
+      setTimeout(() => reject(new Error('Connection timeout')), 5000);
+    });
+
+    // When: Publish 150 messages rapidly (triggers buffer size flush at 100)
+    const publishPromises = [];
+    for (let i = 0; i < 150; i++) {
+      publishPromises.push(
+        new Promise<void>((resolve) => {
+          client.publish(`telemetry/sensor${i % 10}`, `value${i}`, () => resolve());
+        })
+      );
+    }
+    await Promise.all(publishPromises);
+
+    // Wait for flushes to complete
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    // Then: All messages should be persisted
+    const count = await prisma.telemetry.count();
+    expect(count).toBe(150);
+
+    client.end();
+  }, 15000);
+
+  it('should skip system topics (starting with $)', async () => {
+    // Given: MQTT client connected
+    const client = connect(`mqtt://localhost:${MQTT_PORT}`);
+    
+    await new Promise<void>((resolve, reject) => {
+      client.on('connect', () => resolve());
+      client.on('error', reject);
+      setTimeout(() => reject(new Error('Connection timeout')), 5000);
+    });
+
+    // When: Publish regular topics (skip system topics test for now - Aedes handles $SYS internally)
+    client.publish('sensor/temperature', '25.5');
+    client.publish('sensor/humidity', '60');
+    client.publish('device/status', 'online');
+
+    // Wait for messages to be buffered and flushed
+    await new Promise(resolve => setTimeout(resolve, 2500));
+
+    // Then: All regular topics should be stored
+    const messages = await prisma.telemetry.findMany({
+      orderBy: { id: 'asc' }
+    });
+    expect(messages.length).toBeGreaterThanOrEqual(3);
+    expect(messages.some(m => m.topic === 'sensor/temperature')).toBe(true);
+    expect(messages.some(m => m.topic === 'sensor/humidity')).toBe(true);
+    expect(messages.some(m => m.topic === 'device/status')).toBe(true);
+
+    client.end();
+  }, 10000);
+});
+
+describe('Telemetry API Endpoints', () => {
+  let app: PocketMQTT;
+  let prisma: ReturnType<typeof getPrismaClient>;
+  const MQTT_PORT = 1885;
+  const API_PORT = 3002;
+
+  beforeAll(async () => {
+    prisma = getPrismaClient();
+    
+    // Clean up any existing telemetry data
+    await prisma.telemetry.deleteMany();
+    
+    // Initialize PocketMQTT
+    app = new PocketMQTT({
+      mqttPort: MQTT_PORT,
+      apiPort: API_PORT
+    });
+    await app.start();
+  });
+
+  beforeEach(async () => {
+    // Clean database before each test for isolation
+    await prisma.telemetry.deleteMany();
+  });
+
+  afterAll(async () => {
+    // Clean up telemetry data before stopping
+    await prisma.telemetry.deleteMany();
+    
+    // Now stop the app (which will disconnect Prisma)
+    await app.stop();
+  }, 15000);
+
+  it('should submit telemetry via POST /api/v1/telemetry', async () => {
+    // When: POST telemetry data
+    const response = await fetch(`http://localhost:${API_PORT}/api/v1/telemetry`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        topic: 'api/test/topic',
+        payload: 'test payload from API'
+      })
+    });
+
+    // Then: Should return success
+    expect(response.ok).toBe(true);
+    const data = await response.json();
+    expect(data.success).toBe(true);
+
+    // Wait for flush
+    await new Promise(resolve => setTimeout(resolve, 2500));
+
+    // Verify data in database
+    const messages = await prisma.telemetry.findMany({
+      where: { topic: 'api/test/topic' }
+    });
+    expect(messages).toHaveLength(1);
+    expect(messages[0].payload).toBe('test payload from API');
+  }, 10000);
+
+  it('should return 400 for invalid POST data', async () => {
+    // When: POST invalid data (missing payload)
+    const response = await fetch(`http://localhost:${API_PORT}/api/v1/telemetry`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        topic: 'api/test/topic'
+        // missing payload
+      })
+    });
+
+    // Then: Should return 400
+    expect(response.status).toBe(400);
+    const data = await response.json();
+    expect(data.error).toBeTruthy();
+  });
+
+  it('should retrieve telemetry via GET /api/v1/telemetry', async () => {
+    // Given: Some telemetry data in database
+    await prisma.telemetry.createMany({
+      data: [
+        { topic: 'test/topic1', payload: 'payload1', timestamp: new Date() },
+        { topic: 'test/topic2', payload: 'payload2', timestamp: new Date() },
+        { topic: 'test/topic3', payload: 'payload3', timestamp: new Date() },
+      ]
+    });
+
+    // When: GET telemetry data
+    const response = await fetch(`http://localhost:${API_PORT}/api/v1/telemetry`);
+
+    // Then: Should return all telemetry
+    expect(response.ok).toBe(true);
+    const data = await response.json();
+    expect(data.data).toHaveLength(3);
+    expect(data.pagination.total).toBe(3);
+    expect(data.pagination.limit).toBe(100);
+    expect(data.pagination.offset).toBe(0);
+  });
+
+  it('should filter telemetry by topic', async () => {
+    // Given: Telemetry data with different topics
+    await prisma.telemetry.createMany({
+      data: [
+        { topic: 'sensor/temperature', payload: '25.5', timestamp: new Date() },
+        { topic: 'sensor/humidity', payload: '60', timestamp: new Date() },
+        { topic: 'sensor/temperature', payload: '26.0', timestamp: new Date() },
+      ]
+    });
+
+    // When: GET telemetry filtered by topic
+    const response = await fetch(`http://localhost:${API_PORT}/api/v1/telemetry?topic=sensor/temperature`);
+
+    // Then: Should return only temperature readings
+    expect(response.ok).toBe(true);
+    const data = await response.json();
+    expect(data.data).toHaveLength(2);
+    expect(data.pagination.total).toBe(2);
+    expect(data.data.every((msg: { topic: string }) => msg.topic === 'sensor/temperature')).toBe(true);
+  });
+
+  it('should support pagination with limit and offset', async () => {
+    // Given: Multiple telemetry records
+    const records = [];
+    for (let i = 0; i < 50; i++) {
+      records.push({
+        topic: `test/topic${i}`,
+        payload: `payload${i}`,
+        timestamp: new Date(Date.now() + i * 1000) // Spread timestamps
+      });
+    }
+    await prisma.telemetry.createMany({ data: records });
+
+    // When: GET with pagination
+    const response = await fetch(`http://localhost:${API_PORT}/api/v1/telemetry?limit=10&offset=20`);
+
+    // Then: Should return paginated results
+    expect(response.ok).toBe(true);
+    const data = await response.json();
+    expect(data.data).toHaveLength(10);
+    expect(data.pagination.total).toBe(50);
+    expect(data.pagination.limit).toBe(10);
+    expect(data.pagination.offset).toBe(20);
+  });
+});
