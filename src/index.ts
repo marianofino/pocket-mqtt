@@ -86,9 +86,27 @@ export class PocketMQTT {
     this.fastify.get('/api/v1/telemetry', async (request, reply) => {
       const query = request.query as { topic?: string; limit?: string; offset?: string };
       
-      const limit = query.limit ? parseInt(query.limit, 10) : 100;
-      const offset = query.offset ? parseInt(query.offset, 10) : 0;
+      const MAX_LIMIT = 1000;
+      
+      let limit = 100;
+      if (query.limit !== undefined) {
+        const parsedLimit = parseInt(query.limit, 10);
+        if (Number.isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > MAX_LIMIT) {
+          reply.code(400).send({ error: `limit must be an integer between 1 and ${MAX_LIMIT}` });
+          return;
+        }
+        limit = parsedLimit;
+      }
 
+      let offset = 0;
+      if (query.offset !== undefined) {
+        const parsedOffset = parseInt(query.offset, 10);
+        if (Number.isNaN(parsedOffset) || parsedOffset < 0) {
+          reply.code(400).send({ error: 'offset must be a non-negative integer' });
+          return;
+        }
+        offset = parsedOffset;
+      }
       const prisma = this.telemetryService.getPrisma();
       
       const where = query.topic ? { topic: query.topic } : {};
