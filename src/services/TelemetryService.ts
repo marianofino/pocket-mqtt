@@ -71,11 +71,11 @@ export class TelemetryService {
 
     this.isFlushing = true;
 
-    try {
-      // Swap buffer to avoid blocking new messages during flush
-      const messagesToFlush = this.buffer;
-      this.buffer = [];
+    // Swap buffer to avoid blocking new messages during flush
+    const messagesToFlush = this.buffer;
+    this.buffer = [];
 
+    try {
       // Batch insert all messages in a single transaction
       await this.prisma.telemetry.createMany({
         data: messagesToFlush.map(msg => ({
@@ -88,10 +88,11 @@ export class TelemetryService {
       // Reset the flush timer after successful flush
       this.resetFlushTimer();
     } catch (error) {
-      // On error, put messages back in buffer to avoid data loss
+      // On error, restore messages to buffer to avoid data loss
       console.error('Failed to flush telemetry messages:', error);
-      // Note: In production, you might want to implement a retry mechanism
-      // or dead-letter queue instead of just logging
+      
+      // Prepend failed messages back to the buffer to retry in next flush
+      this.buffer = [...messagesToFlush, ...this.buffer];
     } finally {
       this.isFlushing = false;
     }

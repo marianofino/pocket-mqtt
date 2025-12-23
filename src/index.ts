@@ -45,17 +45,20 @@ export class PocketMQTT {
 
   private setupMQTTHandlers(): void {
     // Listen to published messages and buffer them for telemetry
-    this.aedes.on('publish', async (packet, client) => {
+    this.aedes.on('publish', (packet, client) => {
       // Skip system topics (starting with $)
       if (packet.topic.startsWith('$')) {
         return;
       }
       
-      // Buffer the message for batch writing
-      await this.telemetryService.addMessage(
+      // Buffer the message for batch writing (fire and forget for performance)
+      this.telemetryService.addMessage(
         packet.topic,
         packet.payload.toString()
-      );
+      ).catch(err => {
+        // Log errors but don't block MQTT message flow
+        console.error('Error buffering telemetry message:', err);
+      });
     });
   }
 
