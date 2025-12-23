@@ -21,8 +21,8 @@ export function getPrismaClient(): PrismaClient {
     // Initialize Prisma client with adapter
     prisma = new PrismaClient({ adapter });
     
-    // Enable WAL mode for SQLite using Prisma
-    prisma.$executeRawUnsafe('PRAGMA journal_mode=WAL;').catch((err) => {
+    // Enable WAL mode for SQLite using Prisma (safe - no user input)
+    prisma.$executeRaw`PRAGMA journal_mode=WAL;`.catch((err) => {
       console.error('Failed to enable WAL mode:', err);
     });
   }
