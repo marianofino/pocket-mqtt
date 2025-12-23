@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { TelemetryService } from '../services/TelemetryService.js';
-import { getPrismaClient, disconnectPrisma, resetPrismaClient } from '../database.js';
+import { getPrismaClient, disconnectPrisma } from '../database.js';
 
 describe('TelemetryService', () => {
   let service: TelemetryService;
