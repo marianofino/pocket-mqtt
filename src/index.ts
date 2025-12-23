@@ -30,7 +30,15 @@ export class PocketMQTT {
     this.mqttPort = config.mqttPort ?? 1883;
     this.apiPort = config.apiPort ?? 3000;
     this.apiHost = config.apiHost ?? '127.0.0.1';
-    this.jwtSecret = config.jwtSecret ?? process.env.JWT_SECRET ?? 'default-secret-change-in-production';
+    
+    // Get JWT secret from config, environment, or generate a warning
+    const providedSecret = config.jwtSecret ?? process.env.JWT_SECRET;
+    if (!providedSecret) {
+      console.warn('WARNING: No JWT_SECRET provided. Using a default secret for development only. This is NOT secure for production!');
+      this.jwtSecret = 'dev-secret-please-change-in-production';
+    } else {
+      this.jwtSecret = providedSecret;
+    }
     
     // Initialize Aedes MQTT broker
     this.aedes = new Aedes();
@@ -60,8 +68,7 @@ export class PocketMQTT {
     
     // Authenticate hook - validates device tokens on connection
     this.aedes.authenticate = async (client: Client, username: string | undefined, password: Buffer | undefined, callback: (error: AuthenticateError | null, success: boolean) => void) => {
-      // Allow connections without credentials for backward compatibility during testing
-      // In production, you might want to enforce authentication
+      // Reject connections without credentials
       if (!username || !password) {
         callback(null, false);
         return;
@@ -161,8 +168,12 @@ export class PocketMQTT {
       const body = request.body as { username: string; password: string } | undefined;
       const { username, password } = body ?? {};
       
-      // Simple demo authentication (in production, use proper user management)
-      if (username === 'admin' && password === 'admin123') {
+      // Demo authentication - In production, use proper user management with hashed passwords
+      // Configure via environment variables: ADMIN_USERNAME and ADMIN_PASSWORD
+      const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+      const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+      
+      if (username === adminUsername && password === adminPassword) {
         const token = this.fastify.jwt.sign({ username }, { expiresIn: '1h' });
         return { token };
       }
