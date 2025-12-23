@@ -12,7 +12,7 @@ A lightweight, API-first IoT platform with MQTT broker and REST API running in a
 
 ## Requirements
 
-- Node.js v20 or higher
+- Node.js v24 or higher
 
 ## Installation
 

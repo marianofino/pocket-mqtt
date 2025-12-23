@@ -28,7 +28,7 @@ export class PocketMQTT {
     
     // Initialize Fastify API
     this.fastify = Fastify({
-      logger: false
+      logger: true
     });
     
     this.setupRoutes();
@@ -57,7 +57,7 @@ export class PocketMQTT {
         if (err) {
           reject(err);
         } else {
-          console.log(`MQTT broker listening on port ${this.mqttPort}`);
+          this.fastify.log.info(`MQTT broker listening on port ${this.mqttPort}`);
           resolve();
         }
       });
@@ -67,7 +67,7 @@ export class PocketMQTT {
   private async startAPI(): Promise<void> {
     try {
       await this.fastify.listen({ port: this.apiPort, host: this.apiHost });
-      console.log(`Fastify API listening on ${this.apiHost}:${this.apiPort}`);
+      this.fastify.log.info(`Fastify API listening on ${this.apiHost}:${this.apiPort}`);
     } catch (err) {
       const message = `Failed to start Fastify API on ${this.apiHost}:${this.apiPort}`;
       if (err instanceof Error) {
@@ -78,24 +78,44 @@ export class PocketMQTT {
   }
 
   async stop(): Promise<void> {
+    const errors: Error[] = [];
+
     // Close Fastify API
-    await this.fastify.close();
+    try {
+      await this.fastify.close();
+    } catch (err) {
+      errors.push(err instanceof Error ? err : new Error(String(err)));
+    }
     
     // Close MQTT broker
     if (this.mqttServer) {
-      await new Promise<void>((resolve) => {
-        this.mqttServer!.close(() => {
-          resolve();
+      try {
+        await new Promise<void>((resolve, reject) => {
+          this.mqttServer!.close((err) => {
+            if (err) reject(err);
+            else resolve();
+          });
         });
-      });
+      } catch (err) {
+        errors.push(err instanceof Error ? err : new Error(String(err)));
+      }
     }
     
     // Close Aedes
-    await new Promise<void>((resolve) => {
-      this.aedes.close(() => {
-        resolve();
+    try {
+      await new Promise<void>((resolve) => {
+        this.aedes.close(() => {
+          resolve();
+        });
       });
-    });
+    } catch (err) {
+      errors.push(err instanceof Error ? err : new Error(String(err)));
+    }
+
+    // If there were any errors during shutdown, throw an aggregate error
+    if (errors.length > 0) {
+      throw new AggregateError(errors, 'Errors occurred during shutdown');
+    }
   }
 }
 
