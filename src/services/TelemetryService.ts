@@ -31,6 +31,13 @@ export class TelemetryService {
   }
 
   /**
+   * Get the Prisma client instance for database operations.
+   */
+  getPrisma(): PrismaClient {
+    return this.prisma;
+  }
+
+  /**
    * Add a message to the buffer.
    * If buffer reaches max size, flush immediately.
    */

@@ -1,23 +1,36 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { TelemetryService } from '../services/TelemetryService.js';
-import { getPrismaClient, disconnectPrisma } from '../database.js';
+import { getPrismaClient, disconnectPrisma, resetPrismaClient } from '../database.js';
 
 describe('TelemetryService', () => {
   let service: TelemetryService;
   let prisma: ReturnType<typeof getPrismaClient>;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
+    // Start with a clean database
     prisma = getPrismaClient();
-    
-    // Clean up any existing telemetry data
+    await prisma.telemetry.deleteMany();
+  });
+
+  beforeEach(async () => {
+    // Clean database before each test
+    prisma = getPrismaClient();
     await prisma.telemetry.deleteMany();
     
     service = new TelemetryService();
   });
 
   afterEach(async () => {
+    // Stop the service and clean up
     await service.stop();
     await prisma.telemetry.deleteMany();
+    
+    // Small delay to allow flush timers to fully stop
+    await new Promise(resolve => setTimeout(resolve, 100));
+  });
+
+  afterAll(async () => {
+    await disconnectPrisma();
   });
 
   describe('Buffering', () => {

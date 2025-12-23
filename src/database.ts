@@ -32,6 +32,17 @@ export function getPrismaClient(): PrismaClient {
 }
 
 /**
+ * Reset the Prisma client singleton (for testing).
+ */
+export function resetPrismaClient(): void {
+  prisma = null;
+  if (db) {
+    db.close();
+    db = null;
+  }
+}
+
+/**
  * Disconnect the Prisma client and clean up resources.
  */
 export async function disconnectPrisma(): Promise<void> {

@@ -3,6 +3,8 @@ import { createServer } from 'net';
 import Fastify from 'fastify';
 import type { FastifyInstance } from 'fastify';
 import type { Server as NetServer } from 'net';
+import { TelemetryService } from './services/TelemetryService.js';
+import { disconnectPrisma } from './database.js';
 
 export interface PocketMQTTConfig {
   mqttPort?: number;
@@ -17,6 +19,7 @@ export class PocketMQTT {
   private aedes: Aedes;
   private mqttServer: NetServer | null = null;
   private fastify: FastifyInstance;
+  private telemetryService: TelemetryService;
 
   constructor(config: PocketMQTTConfig = {}) {
     this.mqttPort = config.mqttPort ?? 1883;
@@ -26,6 +29,12 @@ export class PocketMQTT {
     // Initialize Aedes MQTT broker
     this.aedes = new Aedes();
     
+    // Initialize Telemetry service
+    this.telemetryService = new TelemetryService();
+    
+    // Hook into MQTT publish events to buffer telemetry
+    this.setupMQTTHandlers();
+    
     // Initialize Fastify API
     this.fastify = Fastify({
       logger: true
@@ -34,10 +43,70 @@ export class PocketMQTT {
     this.setupRoutes();
   }
 
+  private setupMQTTHandlers(): void {
+    // Listen to published messages and buffer them for telemetry
+    this.aedes.on('publish', async (packet, client) => {
+      // Skip system topics (starting with $)
+      if (packet.topic.startsWith('$')) {
+        return;
+      }
+      
+      // Buffer the message for batch writing
+      await this.telemetryService.addMessage(
+        packet.topic,
+        packet.payload.toString()
+      );
+    });
+  }
+
   private setupRoutes(): void {
     // Health check endpoint
     this.fastify.get('/health', async () => {
       return { status: 'ok' };
+    });
+
+    // POST /api/v1/telemetry - Submit telemetry data
+    this.fastify.post('/api/v1/telemetry', async (request, reply) => {
+      const body = request.body as { topic: string; payload: string };
+      
+      if (!body.topic || !body.payload) {
+        reply.code(400).send({ error: 'topic and payload are required' });
+        return;
+      }
+
+      await this.telemetryService.addMessage(body.topic, body.payload);
+      
+      return { success: true, message: 'Telemetry data buffered' };
+    });
+
+    // GET /api/v1/telemetry - Retrieve telemetry data
+    this.fastify.get('/api/v1/telemetry', async (request, reply) => {
+      const query = request.query as { topic?: string; limit?: string; offset?: string };
+      
+      const limit = query.limit ? parseInt(query.limit, 10) : 100;
+      const offset = query.offset ? parseInt(query.offset, 10) : 0;
+
+      const prisma = this.telemetryService.getPrisma();
+      
+      const where = query.topic ? { topic: query.topic } : {};
+      
+      const telemetry = await prisma.telemetry.findMany({
+        where,
+        orderBy: { timestamp: 'desc' },
+        take: limit,
+        skip: offset,
+      });
+
+      const total = await prisma.telemetry.count({ where });
+
+      return {
+        data: telemetry,
+        pagination: {
+          total,
+          limit,
+          offset,
+        },
+      };
     });
   }
 
@@ -80,6 +149,13 @@ export class PocketMQTT {
   async stop(): Promise<void> {
     const errors: Error[] = [];
 
+    // Stop telemetry service first (flushes any pending messages)
+    try {
+      await this.telemetryService.stop();
+    } catch (err) {
+      errors.push(err instanceof Error ? err : new Error(String(err)));
+    }
+
     // Close Fastify API
     try {
       await this.fastify.close();
@@ -108,6 +184,13 @@ export class PocketMQTT {
           resolve();
         });
       });
+    } catch (err) {
+      errors.push(err instanceof Error ? err : new Error(String(err)));
+    }
+
+    // Disconnect Prisma
+    try {
+      await disconnectPrisma();
     } catch (err) {
       errors.push(err instanceof Error ? err : new Error(String(err)));
     }
