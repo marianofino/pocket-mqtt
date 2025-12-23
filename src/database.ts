@@ -1,10 +1,8 @@
 import 'dotenv/config';
 import { PrismaClient } from './generated/prisma/index.js';
 import { PrismaLibSql } from '@prisma/adapter-libsql';
-import Database from 'better-sqlite3';
 
 let prisma: PrismaClient | null = null;
-let db: Database.Database | null = null;
 
 /**
  * Get or create a singleton Prisma client instance.
@@ -23,9 +21,10 @@ export function getPrismaClient(): PrismaClient {
     // Initialize Prisma client with adapter
     prisma = new PrismaClient({ adapter });
     
-    // Separately, use better-sqlite3 to enable WAL mode
-    db = new Database(dbPath);
-    db.pragma('journal_mode = WAL');
+    // Enable WAL mode for SQLite using Prisma
+    prisma.$executeRawUnsafe('PRAGMA journal_mode=WAL;').catch((err) => {
+      console.error('Failed to enable WAL mode:', err);
+    });
   }
   
   return prisma;
@@ -36,10 +35,6 @@ export function getPrismaClient(): PrismaClient {
  */
 export function resetPrismaClient(): void {
   prisma = null;
-  if (db) {
-    db.close();
-    db = null;
-  }
 }
 
 /**
@@ -49,10 +44,5 @@ export async function disconnectPrisma(): Promise<void> {
   if (prisma) {
     await prisma.$disconnect();
     prisma = null;
-  }
-  
-  if (db) {
-    db.close();
-    db = null;
   }
 }
