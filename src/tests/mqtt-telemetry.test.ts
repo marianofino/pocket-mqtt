@@ -23,6 +23,11 @@ describe('MQTT Telemetry Integration Tests', () => {
     await app.start();
   });
 
+  beforeEach(async () => {
+    // Clean database before each test for isolation
+    await prisma.telemetry.deleteMany();
+  });
+
   afterAll(async () => {
     // Clean up telemetry data before stopping
     await prisma.telemetry.deleteMany();
@@ -70,9 +75,6 @@ describe('MQTT Telemetry Integration Tests', () => {
     expect(messages[4].payload).toBe('payload4');
 
     client.end();
-    
-    // Cleanup
-    await prisma.telemetry.deleteMany();
   }, 10000);
 
   it('should handle high-frequency MQTT messages (>1000 msg/min)', async () => {
@@ -104,15 +106,9 @@ describe('MQTT Telemetry Integration Tests', () => {
     expect(count).toBe(150);
 
     client.end();
-    
-    // Cleanup
-    await prisma.telemetry.deleteMany();
   }, 15000);
 
   it('should skip system topics (starting with $)', async () => {
-    // Clean any previous data first
-    await prisma.telemetry.deleteMany();
-    
     // Given: MQTT client connected
     const client = connect(`mqtt://localhost:${MQTT_PORT}`);
     
@@ -140,9 +136,6 @@ describe('MQTT Telemetry Integration Tests', () => {
     expect(messages.some(m => m.topic === 'device/status')).toBe(true);
 
     client.end();
-    
-    // Cleanup
-    await prisma.telemetry.deleteMany();
   }, 10000);
 });
 
@@ -164,6 +157,11 @@ describe('Telemetry API Endpoints', () => {
       apiPort: API_PORT
     });
     await app.start();
+  });
+
+  beforeEach(async () => {
+    // Clean database before each test for isolation
+    await prisma.telemetry.deleteMany();
   });
 
   afterAll(async () => {
@@ -199,9 +197,6 @@ describe('Telemetry API Endpoints', () => {
     });
     expect(messages).toHaveLength(1);
     expect(messages[0].payload).toBe('test payload from API');
-    
-    // Cleanup
-    await prisma.telemetry.deleteMany();
   }, 10000);
 
   it('should return 400 for invalid POST data', async () => {
@@ -241,9 +236,6 @@ describe('Telemetry API Endpoints', () => {
     expect(data.pagination.total).toBe(3);
     expect(data.pagination.limit).toBe(100);
     expect(data.pagination.offset).toBe(0);
-    
-    // Cleanup
-    await prisma.telemetry.deleteMany();
   });
 
   it('should filter telemetry by topic', async () => {
@@ -265,9 +257,6 @@ describe('Telemetry API Endpoints', () => {
     expect(data.data).toHaveLength(2);
     expect(data.pagination.total).toBe(2);
     expect(data.data.every((msg: { topic: string }) => msg.topic === 'sensor/temperature')).toBe(true);
-    
-    // Cleanup
-    await prisma.telemetry.deleteMany();
   });
 
   it('should support pagination with limit and offset', async () => {
@@ -292,8 +281,5 @@ describe('Telemetry API Endpoints', () => {
     expect(data.pagination.total).toBe(50);
     expect(data.pagination.limit).toBe(10);
     expect(data.pagination.offset).toBe(20);
-    
-    // Cleanup
-    await prisma.telemetry.deleteMany();
   });
 });

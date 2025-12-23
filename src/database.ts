@@ -8,7 +8,7 @@ let prisma: PrismaClient | null = null;
  * Get or create a singleton Prisma client instance.
  * Enables WAL mode for SQLite for concurrent I/O as per ARCHITECTURE.md.
  */
-export async function getPrismaClient(): Promise<PrismaClient> {
+export function getPrismaClient(): PrismaClient {
   if (!prisma) {
     // Extract database path from environment variable
     const dbPath = process.env.DATABASE_URL?.replace('file:', '').split('?')[0] || './dev.db';
@@ -22,18 +22,12 @@ export async function getPrismaClient(): Promise<PrismaClient> {
     prisma = new PrismaClient({ adapter });
 
     // Enable WAL mode for SQLite using Prisma (safe - no user input)
-    try {
-      await prisma.$executeRaw`PRAGMA journal_mode=WAL;`;
-    } catch (err) {
+    // This is done asynchronously but we don't wait for it to avoid blocking
+    prisma.$executeRaw`PRAGMA journal_mode=WAL;`.catch((err) => {
       console.error('Failed to enable WAL mode:', err);
-      try {
-        await prisma.$disconnect();
-      } catch {
-        // Ignore disconnect errors during WAL initialization failure
-      }
-      prisma = null;
-      throw err;
-    }
+      // Note: We log the error but don't fail fast here to avoid breaking the synchronous API
+      // WAL mode is an optimization, not a requirement
+    });
   }
   return prisma;
 }

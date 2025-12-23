@@ -20,6 +20,7 @@ export class PocketMQTT {
   private mqttServer: NetServer | null = null;
   private fastify: FastifyInstance;
   private telemetryService: TelemetryService;
+  private readonly maxPayloadSize = 64 * 1024; // 64KB max payload size
 
   constructor(config: PocketMQTTConfig = {}) {
     this.mqttPort = config.mqttPort ?? 1883;
@@ -51,6 +52,13 @@ export class PocketMQTT {
         return;
       }
       
+      // Validate payload size to prevent memory issues
+      const payloadSize = packet.payload.length;
+      if (payloadSize > this.maxPayloadSize) {
+        console.warn(`Rejected MQTT message on topic ${packet.topic}: payload size ${payloadSize} exceeds max ${this.maxPayloadSize}`);
+        return;
+      }
+      
       // Buffer the message for batch writing (fire and forget for performance)
       this.telemetryService.addMessage(
         packet.topic,
@@ -70,14 +78,28 @@ export class PocketMQTT {
 
     // POST /api/v1/telemetry - Submit telemetry data
     this.fastify.post('/api/v1/telemetry', async (request, reply) => {
-      const body = request.body as { topic: string; payload: string };
+      const body = request.body as { topic: string; payload: string } | undefined;
+      const { topic, payload } = body ?? {};
       
-      if (!body.topic || !body.payload) {
-        reply.code(400).send({ error: 'topic and payload are required' });
+      // Stricter validation for empty strings
+      if (
+        typeof topic !== 'string' ||
+        topic.trim().length === 0 ||
+        typeof payload !== 'string' ||
+        payload.trim().length === 0
+      ) {
+        reply.code(400).send({ error: 'topic and payload must be non-empty strings' });
         return;
       }
 
-      await this.telemetryService.addMessage(body.topic, body.payload);
+      // Validate payload size to prevent memory exhaustion
+      const payloadSize = Buffer.byteLength(payload, 'utf8');
+      if (payloadSize > this.maxPayloadSize) {
+        reply.code(400).send({ error: `payload size ${payloadSize} exceeds maximum ${this.maxPayloadSize} bytes` });
+        return;
+      }
+
+      await this.telemetryService.addMessage(topic, payload);
       
       return { success: true, message: 'Telemetry data buffered' };
     });

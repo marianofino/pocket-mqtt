@@ -21,6 +21,8 @@ export class TelemetryService {
   private flushTimer: NodeJS.Timeout | null = null;
   private readonly flushInterval = 2000; // 2 seconds
   private readonly maxBufferSize = 100; // Max messages before forced flush
+  private readonly maxRetries = 3; // Max retry attempts for failed flushes
+  private retryCount = 0; // Current retry count
   private prisma: PrismaClient;
   private isRunning = true;
   private isFlushing = false;
@@ -88,14 +90,22 @@ export class TelemetryService {
         })),
       });
 
-      // Reset the flush timer after successful flush
-      this.resetFlushTimer();
+      // Reset retry count on successful flush
+      this.retryCount = 0;
     } catch (error) {
       // On error, restore messages to buffer to avoid data loss
       console.error('Failed to flush telemetry messages:', error);
       
-      // Prepend failed messages back to the buffer to retry in next flush
-      this.buffer = [...messagesToFlush, ...this.buffer];
+      this.retryCount++;
+      
+      // Implement circuit breaker: if max retries exceeded, drop oldest messages
+      if (this.retryCount >= this.maxRetries) {
+        console.error(`Max retries (${this.maxRetries}) exceeded. Dropping ${messagesToFlush.length} messages to prevent memory overflow.`);
+        this.retryCount = 0; // Reset for next batch
+      } else {
+        // Prepend failed messages back to the buffer to retry in next flush
+        this.buffer = [...messagesToFlush, ...this.buffer];
+      }
     } finally {
       this.isFlushing = false;
     }
@@ -112,15 +122,7 @@ export class TelemetryService {
     }, this.flushInterval);
   }
 
-  /**
-   * Reset the flush timer (called after manual flush).
-   */
-  private resetFlushTimer(): void {
-    if (this.flushTimer) {
-      clearInterval(this.flushTimer);
-    }
-    this.startFlushTimer();
-  }
+
 
   /**
    * Stop the service and flush any remaining messages.
