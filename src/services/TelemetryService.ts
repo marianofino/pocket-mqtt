@@ -52,10 +52,13 @@ export class TelemetryService {
       timestamp: new Date(),
     };
 
+    // Determine if adding this message will fill or exceed the buffer
+    const willReachMaxBufferSize = this.buffer.length + 1 >= this.maxBufferSize;
+
     this.buffer.push(message);
 
-    // If buffer is full, flush immediately
-    if (this.buffer.length >= this.maxBufferSize) {
+    // If buffer is full and no flush is currently in progress, flush immediately
+    if (willReachMaxBufferSize && !this.isFlushing) {
       await this.flush();
     }
   }
