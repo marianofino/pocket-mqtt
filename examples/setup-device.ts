@@ -5,6 +5,10 @@
  * This script helps you create device tokens in the database
  * for testing MQTT authentication.
  * 
+ * Prerequisites:
+ * 1. Run database migrations: npx prisma migrate deploy
+ * 2. Generate Prisma client: npx prisma generate
+ * 
  * Usage: npx tsx examples/setup-device.ts
  */
 
@@ -30,7 +34,35 @@ const devices = [
 
 console.log('=== Device Token Setup ===\n');
 
+async function checkDatabaseSetup() {
+  const prisma = getPrismaClient();
+  
+  try {
+    // Try to query the DeviceToken table to check if migrations are applied
+    await prisma.deviceToken.findFirst();
+    return true;
+  } catch (error: any) {
+    if (error.message && error.message.includes('no such table')) {
+      console.error('✗ Database not initialized!\n');
+      console.log('The DeviceToken table does not exist. Please run database migrations first:\n');
+      console.log('  1. npx prisma migrate deploy');
+      console.log('  2. npx prisma generate\n');
+      console.log('Then run this script again.\n');
+      return false;
+    }
+    throw error;
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
 async function setupDevices() {
+  // Check if database is set up
+  const isSetup = await checkDatabaseSetup();
+  if (!isSetup) {
+    process.exit(1);
+  }
+  
   const prisma = getPrismaClient();
   
   try {

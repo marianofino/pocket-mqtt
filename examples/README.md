@@ -9,7 +9,13 @@ This directory contains example scripts to help you test and understand the secu
    npm install
    ```
 
-2. Start the PocketMQTT server:
+2. **Run database migrations** (IMPORTANT - do this first!):
+   ```bash
+   npx prisma migrate deploy
+   npx prisma generate
+   ```
+
+3. Start the PocketMQTT server:
    ```bash
    npm run dev
    ```
@@ -23,6 +29,8 @@ First, create device tokens in the database for MQTT authentication:
 ```bash
 npx tsx examples/setup-device.ts
 ```
+
+**Note:** If you get a "no such table" error, make sure you ran the database migrations first (see Prerequisites above).
 
 This will create three test devices:
 - `sensor-001` - For the MQTT publisher example
@@ -183,6 +191,14 @@ npm run dev
 
 ## Troubleshooting
 
+### "no such table: DeviceToken" Error
+This means the database migrations haven't been run yet. Fix it with:
+```bash
+npx prisma migrate deploy
+npx prisma generate
+```
+Then run the setup script again.
+
 ### MQTT Connection Refused
 - Check that the server is running (`npm run dev`)
 - Verify the device token exists in the database
@@ -191,7 +207,7 @@ npm run dev
 ### REST API 401 Unauthorized
 - Verify you're using a valid JWT token
 - Check token hasn't expired (default: 1 hour)
-- Ensure you're using the `Authorization: Bearer <token>` header
+- Ensure you're using the `Authorization: ****** header
 
 ### Database Errors
 - Run migrations: `npx prisma migrate deploy`
