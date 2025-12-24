@@ -75,8 +75,8 @@ export class TelemetryService {
     const validatedData = validateMqttPayload({ topic, payload });
     
     if (!validatedData) {
-      // Invalid payload - discard and log
-      console.warn(`Invalid MQTT payload discarded - topic: ${topic}`);
+      // Invalid payload - discard and log (avoid logging potentially sensitive topic)
+      console.warn('Invalid MQTT payload discarded');
       return;
     }
 
@@ -114,14 +114,17 @@ export class TelemetryService {
     this.buffer = [];
 
     try {
-      // Batch insert all messages using repository
-      await this.repository.telemetry.createMany(
-        messagesToFlush.map(msg => ({
-          topic: msg.topic,
-          payload: msg.payload,
-          timestamp: msg.timestamp,
-        }))
-      );
+      // Only attempt batch insert if there are messages to flush
+      if (messagesToFlush.length > 0) {
+        // Batch insert all messages using repository
+        await this.repository.telemetry.createMany(
+          messagesToFlush.map(msg => ({
+            topic: msg.topic,
+            payload: msg.payload,
+            timestamp: msg.timestamp,
+          }))
+        );
+      }
 
       // Reset retry count on successful flush
       this.retryCount = 0;

@@ -16,12 +16,12 @@ DATABASE_ADAPTER="sqlite"
 
 ### Using PostgreSQL
 
-To use PostgreSQL, set the `DATABASE_ADAPTER` environment variable and provide a PostgreSQL connection string:
+To use PostgreSQL, set the `DATABASE_ADAPTER` environment variable to either `postgres` or `postgresql` and provide a PostgreSQL connection string:
 
 ```bash
 # .env
 DATABASE_URL="postgresql://user:password@localhost:5432/pocketmqtt"
-DATABASE_ADAPTER="postgres"
+DATABASE_ADAPTER="postgres" # or "postgresql"
 ```
 
 ## Repository Pattern

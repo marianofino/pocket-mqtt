@@ -8,6 +8,8 @@ import type { IRepository } from './repository/interfaces.js';
 
 let repository: IRepository | null = null;
 let prisma: PrismaClient | null = null;
+let initializationPromise: Promise<IRepository> | null = null;
+let pgPool: Pool | null = null;
 
 /**
  * Database adapter types supported by the application.
@@ -17,6 +19,7 @@ export type DatabaseAdapter = 'sqlite' | 'postgres';
 /**
  * Get the database adapter from environment variable.
  * Defaults to 'sqlite' if not specified.
+ * Accepts both 'postgres' and 'postgresql' as valid values for PostgreSQL.
  */
 export function getDatabaseAdapter(): DatabaseAdapter {
   const adapter = process.env.DATABASE_ADAPTER?.toLowerCase();
@@ -41,8 +44,9 @@ function createPrismaClient(): PrismaClient {
           'Ensure this is the intended database configuration.'
       );
     }
-    const pool = new Pool({ connectionString });
-    const pgAdapter = new PrismaPg(pool);
+    // Store pool reference for cleanup during disconnect
+    pgPool = new Pool({ connectionString });
+    const pgAdapter = new PrismaPg(pgPool);
     const client = new PrismaClient({ adapter: pgAdapter });
 
     // Perform a non-blocking connectivity check for PostgreSQL to surface configuration issues early.
@@ -79,13 +83,49 @@ function createPrismaClient(): PrismaClient {
 /**
  * Get or create a singleton repository instance.
  * Uses the Repository Pattern as per ARCHITECTURE.md to abstract Prisma calls.
+ * Thread-safe initialization to prevent race conditions in high-concurrency scenarios.
  */
 export function getRepository(): IRepository {
-  if (!repository) {
-    prisma = createPrismaClient();
-    repository = new PrismaRepository(prisma);
+  if (repository) {
+    return repository;
   }
+
+  // If already initializing, wait for it to complete
+  if (initializationPromise) {
+    throw new Error('Repository is being initialized asynchronously. Use getRepositoryAsync() instead.');
+  }
+
+  // Synchronous initialization for backward compatibility
+  prisma = createPrismaClient();
+  repository = new PrismaRepository(prisma);
   return repository;
+}
+
+/**
+ * Async version of getRepository() that prevents race conditions.
+ * Recommended for new code to ensure thread-safe initialization.
+ */
+export async function getRepositoryAsync(): Promise<IRepository> {
+  if (repository) {
+    return repository;
+  }
+
+  // If already initializing, wait for existing promise
+  if (initializationPromise) {
+    return initializationPromise;
+  }
+
+  // Create initialization promise to prevent concurrent initialization
+  initializationPromise = Promise.resolve().then(() => {
+    if (!repository) {
+      prisma = createPrismaClient();
+      repository = new PrismaRepository(prisma);
+    }
+    initializationPromise = null;
+    return repository;
+  });
+
+  return initializationPromise;
 }
 
 /**
@@ -105,10 +145,13 @@ export function getPrismaClient(): PrismaClient {
 export function resetPrismaClient(): void {
   prisma = null;
   repository = null;
+  initializationPromise = null;
+  pgPool = null;
 }
 
 /**
  * Disconnect the repository/Prisma client and clean up resources.
+ * Properly closes PostgreSQL connection pool if in use.
  */
 export async function disconnectPrisma(): Promise<void> {
   if (repository) {
@@ -119,4 +162,12 @@ export async function disconnectPrisma(): Promise<void> {
     await prisma.$disconnect();
     prisma = null;
   }
+
+  // Explicitly close PostgreSQL connection pool if it exists
+  if (pgPool) {
+    await pgPool.end();
+    pgPool = null;
+  }
+
+  initializationPromise = null;
 }
