@@ -5,6 +5,7 @@
 - **Broker:** Aedes (integrated).
 - **ORM:** Prisma (SQLite by default / PostgreSQL via ENV).
 - **Testing:** Vitest + Supertest (for API testing).
+- **Security:** JWT (REST API) + Device Token (MQTT).
 
 ## 2. Data Flow
 1. **Ingestion:** MQTT Topic -> Memory Buffer (fastq).
@@ -15,3 +16,30 @@
 - **Multi-DB:** Use a Repository Pattern to abstract Prisma calls.
 - **Auth:** Device-token based (MQTT) & JWT (API).
 - **Performance:** SQLite WAL mode enabled for concurrent I/O.
+- **Prisma Client:** Always consume the generated `@prisma/client` package (via `npm run db:generate`) so both dev and build artifacts share the same schema delegates.
+
+## 4. Security Implementation
+
+### MQTT Security (Device Token Authentication)
+- **Authentication Hook:** Validates device tokens on MQTT connection
+  - Devices must provide `username` (deviceId) and `password` (token)
+  - Tokens are stored in the `DeviceToken` table with optional expiration
+  - Expired tokens are automatically rejected
+  - Unauthorized connections are refused
+
+- **Authorization Hook:** Controls publish permissions
+  - Currently allows all authenticated devices to publish
+  - Extensible for topic-based permissions
+
+### REST API Security (JWT Authentication)
+- **JWT Plugin:** `@fastify/jwt` for token generation and verification
+- **Protected Endpoints:**
+  - `POST /api/v1/telemetry` - Requires valid JWT
+  - `GET /api/v1/telemetry` - Requires valid JWT
+- **Public Endpoints:**
+  - `GET /health` - Health check (no auth)
+  - `POST /api/v1/auth/login` - JWT token generation
+- **Token Configuration:**
+  - Secret: Configurable via `JWT_SECRET` environment variable or config
+  - Expiration: 1 hour (configurable)
+  - Algorithm: HS256 (default)

@@ -8,12 +8,23 @@ describe('MQTT Telemetry Integration Tests', () => {
   let prisma: ReturnType<typeof getPrismaClient>;
   const MQTT_PORT = 1884;
   const API_PORT = 3001;
+  const testDeviceId = 'test-device';
+  const testDeviceToken = 'test-token-12345';
 
   beforeAll(async () => {
     prisma = getPrismaClient();
     
-    // Clean up any existing telemetry data
+    // Clean up any existing data
+    await prisma.deviceToken.deleteMany();
     await prisma.telemetry.deleteMany();
+    
+    // Create a test device token
+    await prisma.deviceToken.create({
+      data: {
+        deviceId: testDeviceId,
+        token: testDeviceToken
+      }
+    });
     
     // Initialize PocketMQTT with both services
     app = new PocketMQTT({
@@ -29,7 +40,8 @@ describe('MQTT Telemetry Integration Tests', () => {
   });
 
   afterAll(async () => {
-    // Clean up telemetry data before stopping
+    // Clean up data before stopping
+    await prisma.deviceToken.deleteMany();
     await prisma.telemetry.deleteMany();
     
     // Now stop the app (which will disconnect Prisma)
@@ -37,8 +49,11 @@ describe('MQTT Telemetry Integration Tests', () => {
   }, 15000);
 
   it('should buffer MQTT messages and flush them to database after 2 seconds', async () => {
-    // Given: MQTT client connected
-    const client = connect(`mqtt://localhost:${MQTT_PORT}`);
+    // Given: MQTT client connected with valid credentials
+    const client = connect(`mqtt://localhost:${MQTT_PORT}`, {
+      username: testDeviceId,
+      password: testDeviceToken
+    });
     
     await new Promise<void>((resolve, reject) => {
       client.on('connect', () => resolve());
@@ -78,8 +93,11 @@ describe('MQTT Telemetry Integration Tests', () => {
   }, 10000);
 
   it('should handle high-frequency MQTT messages (>1000 msg/min)', async () => {
-    // Given: MQTT client connected
-    const client = connect(`mqtt://localhost:${MQTT_PORT}`);
+    // Given: MQTT client connected with valid credentials
+    const client = connect(`mqtt://localhost:${MQTT_PORT}`, {
+      username: testDeviceId,
+      password: testDeviceToken
+    });
     
     await new Promise<void>((resolve, reject) => {
       client.on('connect', () => resolve());
@@ -109,8 +127,11 @@ describe('MQTT Telemetry Integration Tests', () => {
   }, 15000);
 
   it('should skip system topics (starting with $)', async () => {
-    // Given: MQTT client connected
-    const client = connect(`mqtt://localhost:${MQTT_PORT}`);
+    // Given: MQTT client connected with valid credentials
+    const client = connect(`mqtt://localhost:${MQTT_PORT}`, {
+      username: testDeviceId,
+      password: testDeviceToken
+    });
     
     await new Promise<void>((resolve, reject) => {
       client.on('connect', () => resolve());
@@ -144,6 +165,21 @@ describe('Telemetry API Endpoints', () => {
   let prisma: ReturnType<typeof getPrismaClient>;
   const MQTT_PORT = 1885;
   const API_PORT = 3002;
+  let authToken: string;
+
+  // Helper function to get JWT token
+  async function getAuthToken(): Promise<string> {
+    const response = await fetch(`http://localhost:${API_PORT}/api/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: 'admin',
+        password: 'admin123'
+      })
+    });
+    const data = await response.json();
+    return data.token;
+  }
 
   beforeAll(async () => {
     prisma = getPrismaClient();
@@ -157,6 +193,9 @@ describe('Telemetry API Endpoints', () => {
       apiPort: API_PORT
     });
     await app.start();
+
+    // Get auth token for tests
+    authToken = await getAuthToken();
   });
 
   beforeEach(async () => {
@@ -176,7 +215,10 @@ describe('Telemetry API Endpoints', () => {
     // When: POST telemetry data
     const response = await fetch(`http://localhost:${API_PORT}/api/v1/telemetry`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
       body: JSON.stringify({
         topic: 'api/test/topic',
         payload: 'test payload from API'
@@ -203,7 +245,10 @@ describe('Telemetry API Endpoints', () => {
     // When: POST invalid data (missing payload)
     const response = await fetch(`http://localhost:${API_PORT}/api/v1/telemetry`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      },
       body: JSON.stringify({
         topic: 'api/test/topic'
         // missing payload
@@ -227,7 +272,11 @@ describe('Telemetry API Endpoints', () => {
     });
 
     // When: GET telemetry data
-    const response = await fetch(`http://localhost:${API_PORT}/api/v1/telemetry`);
+    const response = await fetch(`http://localhost:${API_PORT}/api/v1/telemetry`, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
 
     // Then: Should return all telemetry
     expect(response.ok).toBe(true);
@@ -249,7 +298,11 @@ describe('Telemetry API Endpoints', () => {
     });
 
     // When: GET telemetry filtered by topic
-    const response = await fetch(`http://localhost:${API_PORT}/api/v1/telemetry?topic=sensor/temperature`);
+    const response = await fetch(`http://localhost:${API_PORT}/api/v1/telemetry?topic=sensor/temperature`, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
 
     // Then: Should return only temperature readings
     expect(response.ok).toBe(true);
@@ -272,7 +325,11 @@ describe('Telemetry API Endpoints', () => {
     await prisma.telemetry.createMany({ data: records });
 
     // When: GET with pagination
-    const response = await fetch(`http://localhost:${API_PORT}/api/v1/telemetry?limit=10&offset=20`);
+    const response = await fetch(`http://localhost:${API_PORT}/api/v1/telemetry?limit=10&offset=20`, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
 
     // Then: Should return paginated results
     expect(response.ok).toBe(true);

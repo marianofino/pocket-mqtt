@@ -6,6 +6,7 @@ A lightweight, API-first IoT platform with MQTT broker and REST API running in a
 
 - 🚀 **MQTT Broker**: Aedes-based MQTT broker on port 1883
 - 🌐 **REST API**: Fastify-based API on port 3000
+- 🔒 **Security**: JWT authentication for REST API, Device token validation for MQTT
 - 📊 **Telemetry Storage**: Efficient data persistence with batching (2s interval, >1000 msg/min capacity)
 - 💾 **SQLite WAL Mode**: Concurrent I/O for high-performance writes
 - 📦 **ESM + TypeScript**: Modern JavaScript with full type safety
@@ -84,26 +85,59 @@ npm start
 ## API Endpoints
 
 ### Health
-- `GET /health` - Health check endpoint
+- `GET /health` - Health check endpoint (public, no authentication)
 
-### Telemetry
+### Authentication
+- `POST /api/v1/auth/login` - Generate JWT token
+  - Body: `{ "username": "admin", "password": "admin123" }`
+  - Response: `{ "token": "eyJhbGc..." }`
+
+### Telemetry (Protected - Requires JWT)
 - `POST /api/v1/telemetry` - Submit telemetry data
+  - Headers: `Authorization: Bearer <jwt_token>`
   - Body: `{ "topic": "sensor/temp", "payload": "25.5" }`
   - Response: `{ "success": true, "message": "Telemetry data buffered" }`
 
 - `GET /api/v1/telemetry` - Retrieve telemetry data
+  - Headers: `Authorization: Bearer <jwt_token>`
   - Query params: `topic`, `limit` (default 100), `offset` (default 0)
   - Response: `{ "data": [...], "pagination": { "total": 100, "limit": 100, "offset": 0 } }`
 
 ## MQTT
 
-Connect to the MQTT broker on port 1883:
+Connect to the MQTT broker on port 1883 with device credentials:
 
 ```bash
 mqtt://localhost:1883
+# Username: <device_id>
+# Password: <device_token>
+```
+
+### Device Authentication
+All MQTT connections require valid device credentials:
+- **Username**: Device ID (e.g., "sensor-001")
+- **Password**: Device token (stored in DeviceToken table)
+
+To create a device token, insert a record in the `DeviceToken` table:
+```sql
+INSERT INTO DeviceToken (deviceId, token) VALUES ('sensor-001', 'your-secure-token-here');
 ```
 
 All published messages (except system topics starting with `$`) are automatically buffered and persisted to the database in batches every 2 seconds or when 100 messages are buffered.
+
+## Security
+
+### REST API Security
+- **JWT Authentication**: All telemetry endpoints require a valid JWT token
+- **Token Expiration**: Tokens expire after 1 hour
+- **Demo Credentials**: username: `admin`, password: `admin123` (change in production)
+- **Configuration**: Set `JWT_SECRET` environment variable for production
+
+### MQTT Security  
+- **Device Token Authentication**: All MQTT connections require valid device credentials
+- **Token Validation**: Tokens are validated against the database on connection
+- **Token Expiration**: Optional token expiration support via `expiresAt` field
+- **Authorization**: Authenticated devices can publish to any topic (extensible for topic-based permissions)
 
 ## Architecture
 

@@ -1,5 +1,5 @@
 import { getPrismaClient } from '../database.js';
-import type { PrismaClient } from '../generated/prisma/index.js';
+import type { PrismaClient } from '@prisma/client';
 
 interface TelemetryMessage {
   topic: string;
