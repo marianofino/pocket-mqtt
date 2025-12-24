@@ -118,9 +118,10 @@ DATABASE_URL="file:./dev.db"
 DATABASE_ADAPTER="sqlite"
 ```
 
-And regenerate the Prisma client:
+Run migrations and regenerate the Prisma client:
 
 ```bash
+npm run db:migrate
 npm run db:generate
 ```
 
