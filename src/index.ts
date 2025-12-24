@@ -6,7 +6,7 @@ import fastifyJwt from '@fastify/jwt';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { Server as NetServer } from 'net';
 import { TelemetryService } from './services/TelemetryService.js';
-import { disconnectPrisma, getPrismaClient } from './database.js';
+import { disconnectPrisma } from './database.js';
 
 export interface PocketMQTTConfig {
   mqttPort?: number;
@@ -64,7 +64,7 @@ export class PocketMQTT {
   }
 
   private setupMQTTAuthentication(): void {
-    const prisma = getPrismaClient();
+    const repository = this.telemetryService.getRepository();
     
     // Authenticate hook - validates device tokens on connection
     this.aedes.authenticate = async (_client: Client, username: string | undefined, password: Buffer | undefined, callback: (error: AuthenticateError | null, success: boolean) => void) => {
@@ -77,10 +77,8 @@ export class PocketMQTT {
       try {
         const token = password.toString();
         
-        // Look up device token in database
-        const deviceToken = await prisma.deviceToken.findUnique({
-          where: { token }
-        });
+        // Look up device token in database using repository
+        const deviceToken = await repository.deviceToken.findByToken(token);
 
         if (!deviceToken) {
           callback(null, false);
@@ -247,18 +245,19 @@ export class PocketMQTT {
         }
         offset = parsedOffset;
       }
-      const prisma = this.telemetryService.getPrisma();
+      const repository = this.telemetryService.getRepository();
       
-      const where = query.topic ? { topic: query.topic } : {};
-      
-      const telemetry = await prisma.telemetry.findMany({
-        where,
-        orderBy: { timestamp: 'desc' },
-        take: limit,
-        skip: offset,
+      const telemetry = await repository.telemetry.findMany({
+        topic: query.topic,
+        limit,
+        offset,
+        orderBy: 'timestamp',
+        orderDirection: 'desc',
       });
 
-      const total = await prisma.telemetry.count({ where });
+      const total = await repository.telemetry.count({
+        topic: query.topic,
+      });
 
       return {
         data: telemetry,

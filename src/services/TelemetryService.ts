@@ -1,5 +1,6 @@
-import { getPrismaClient } from '../database.js';
-import type { PrismaClient } from '@prisma/client';
+import { getRepository } from '../database.js';
+import type { IRepository } from '../repository/interfaces.js';
+import { validateMqttPayload } from '../validation.js';
 
 interface TelemetryMessage {
   topic: string;
@@ -12,8 +13,10 @@ interface TelemetryMessage {
  * 
  * As per ARCHITECTURE.md, this service:
  * - Buffers incoming MQTT messages in memory
+ * - Validates payloads using Zod before buffering
  * - Flushes to database every 2 seconds or 100 messages (whichever comes first)
  * - Supports >1000 msg/min capacity
+ * - Uses Repository Pattern for database abstraction
  * - Uses SQLite WAL mode for concurrent I/O
  */
 export class TelemetryService {
@@ -23,24 +26,44 @@ export class TelemetryService {
   private readonly maxBufferSize = 100; // Max messages before forced flush
   private readonly maxRetries = 3; // Max retry attempts for failed flushes
   private retryCount = 0; // Current retry count
-  private prisma: PrismaClient;
+  private repository: IRepository;
   private isRunning = true;
   private isFlushing = false;
 
   constructor() {
-    this.prisma = getPrismaClient();
+    this.repository = getRepository();
     this.startFlushTimer();
   }
 
   /**
-   * Get the Prisma client instance for database operations.
+   * Get the repository instance for database operations.
    */
-  getPrisma(): PrismaClient {
-    return this.prisma;
+  getRepository(): IRepository {
+    return this.repository;
   }
 
   /**
-   * Add a message to the buffer.
+   * Get the Prisma client instance for database operations.
+   * @deprecated Use getRepository() instead for Repository Pattern.
+   */
+  getPrisma(): import('@prisma/client').PrismaClient {
+    // Backwards compatibility for tests: only works with Prisma-backed repositories
+    const repoWithPrisma = this.repository as unknown as {
+      getPrismaClient?: () => import('@prisma/client').PrismaClient;
+    };
+
+    if (typeof repoWithPrisma.getPrismaClient === 'function') {
+      return repoWithPrisma.getPrismaClient();
+    }
+
+    throw new Error(
+      'getPrisma() is only available when using a Prisma-backed repository. ' +
+        'Use getRepository() for repository-agnostic access.',
+    );
+  }
+
+  /**
+   * Add a message to the buffer with Zod validation.
    * If buffer reaches max size, flush immediately.
    */
   async addMessage(topic: string, payload: string): Promise<void> {
@@ -48,9 +71,18 @@ export class TelemetryService {
       throw new Error('TelemetryService is stopped');
     }
 
+    // Validate payload using Zod schema
+    const validatedData = validateMqttPayload({ topic, payload });
+    
+    if (!validatedData) {
+      // Invalid payload - discard and log (avoid logging potentially sensitive topic)
+      console.warn('Invalid MQTT payload discarded');
+      return;
+    }
+
     const message: TelemetryMessage = {
-      topic,
-      payload,
+      topic: validatedData.topic,
+      payload: validatedData.payload,
       timestamp: new Date(),
     };
 
@@ -67,6 +99,7 @@ export class TelemetryService {
 
   /**
    * Flush all buffered messages to the database in a single transaction.
+   * Uses Repository Pattern for database abstraction.
    */
   async flush(): Promise<void> {
     // Prevent concurrent flushes
@@ -81,14 +114,17 @@ export class TelemetryService {
     this.buffer = [];
 
     try {
-      // Batch insert all messages in a single transaction
-      await this.prisma.telemetry.createMany({
-        data: messagesToFlush.map(msg => ({
-          topic: msg.topic,
-          payload: msg.payload,
-          timestamp: msg.timestamp,
-        })),
-      });
+      // Only attempt batch insert if there are messages to flush
+      if (messagesToFlush.length > 0) {
+        // Batch insert all messages using repository
+        await this.repository.telemetry.createMany(
+          messagesToFlush.map(msg => ({
+            topic: msg.topic,
+            payload: msg.payload,
+            timestamp: msg.timestamp,
+          }))
+        );
+      }
 
       // Reset retry count on successful flush
       this.retryCount = 0;

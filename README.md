@@ -7,8 +7,10 @@ A lightweight, API-first IoT platform with MQTT broker and REST API running in a
 - 🚀 **MQTT Broker**: Aedes-based MQTT broker on port 1883
 - 🌐 **REST API**: Fastify-based API on port 3000
 - 🔒 **Security**: JWT authentication for REST API, Device token validation for MQTT
+- ✅ **Validation**: Zod schemas validate MQTT payloads before buffering
 - 📊 **Telemetry Storage**: Efficient data persistence with batching (2s interval, >1000 msg/min capacity)
-- 💾 **SQLite WAL Mode**: Concurrent I/O for high-performance writes
+- 💾 **Multi-Database**: SQLite (default) or PostgreSQL via environment variable
+- 🏗️ **Repository Pattern**: Database-agnostic abstraction layer
 - 📦 **ESM + TypeScript**: Modern JavaScript with full type safety
 - 🧪 **TDD-Enabled**: Vitest for testing with built-in coverage
 - ⚡ **Single Process**: Both services in one lightweight process
@@ -25,14 +27,37 @@ npm install
 
 ## Database Setup
 
-The platform uses Prisma with SQLite (WAL mode) for telemetry storage:
+The platform supports SQLite (default) and PostgreSQL.
+
+### SQLite (Default)
 
 ```bash
+# .env
+DATABASE_URL="file:./dev.db"
+DATABASE_ADAPTER="sqlite"
+
 # Run migrations
-npx prisma migrate dev
+npm run db:migrate
 
 # Generate Prisma client
-npx prisma generate
+npm run db:generate
+```
+
+### PostgreSQL
+
+```bash
+# .env
+DATABASE_URL="postgresql://user:password@localhost:5432/pocketmqtt"
+DATABASE_ADAPTER="postgres"  # or "postgresql"
+
+# Create database (if needed)
+createdb pocketmqtt
+
+# Run migrations
+npm run db:migrate
+
+# Generate Prisma client
+npm run db:generate
 ```
 
 ## Development
