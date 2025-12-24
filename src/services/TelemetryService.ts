@@ -46,9 +46,10 @@ export class TelemetryService {
    * Get the Prisma client instance for database operations.
    * @deprecated Use getRepository() instead for Repository Pattern.
    */
-  getPrisma(): any {
+  getPrisma(): import('@prisma/client').PrismaClient {
     // Backwards compatibility for tests
-    return (this.repository as any).getPrismaClient();
+    const prismaRepo = this.repository as import('../repository/PrismaRepository.js').PrismaRepository;
+    return prismaRepo.getPrismaClient();
   }
 
   /**
