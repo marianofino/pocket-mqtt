@@ -35,9 +35,27 @@ function createPrismaClient(): PrismaClient {
   if (adapter === 'postgres') {
     // PostgreSQL adapter using pg driver
     const connectionString = process.env.DATABASE_URL || 'postgresql://localhost:5432/pocketmqtt';
+    if (!process.env.DATABASE_URL) {
+      console.warn(
+        'DATABASE_URL is not set; defaulting to postgresql://localhost:5432/pocketmqtt. ' +
+          'Ensure this is the intended database configuration.'
+      );
+    }
     const pool = new Pool({ connectionString });
     const pgAdapter = new PrismaPg(pool);
-    return new PrismaClient({ adapter: pgAdapter });
+    const client = new PrismaClient({ adapter: pgAdapter });
+
+    // Perform a non-blocking connectivity check for PostgreSQL to surface configuration issues early.
+    // We don't await this to keep the API synchronous, but we log clear errors if the connection fails.
+    client.$queryRaw`SELECT 1`.catch((err: unknown) => {
+      console.error(
+        'Failed to connect to PostgreSQL database during initialization. ' +
+          'Verify that DATABASE_URL is correct and the database is reachable.',
+        err
+      );
+    });
+
+    return client;
   } else {
     // SQLite adapter using LibSQL
     const dbPath = process.env.DATABASE_URL?.replace('file:', '').split('?')[0] || './dev.db';
