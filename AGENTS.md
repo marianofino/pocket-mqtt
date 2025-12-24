@@ -22,3 +22,11 @@ Before adding any new functionality or refactoring:
 - **TypeScript Only:** Use strict ESM and TypeScript.
 - **API-First:** Every MQTT feature must have a corresponding REST API endpoint.
 - **Performance:** Ensure DB writes follow the "Batching Rule" in ARCHITECTURE.md.
+
+## Documentation Rules
+**IMPORTANT:** Only maintain these 3 documentation files (keep them brief):
+1. **AGENTS.md** - High-level instructions for coding agents
+2. **ARCHITECTURE.md** - Technical design decisions and key implementation details
+3. **README.md** - User-facing documentation (project overview, configuration, quickstart)
+
+**Do NOT create additional documentation files** (except in `/examples` directory). All documentation must fit into one of the 3 main files above.
