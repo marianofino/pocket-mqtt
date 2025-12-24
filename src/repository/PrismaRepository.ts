@@ -18,11 +18,7 @@ class PrismaTelemetryRepository implements ITelemetryRepository {
 
   async createMany(data: TelemetryData[]): Promise<void> {
     await this.prisma.telemetry.createMany({
-      data: data.map((item) => ({
-        topic: item.topic,
-        payload: item.payload,
-        timestamp: item.timestamp,
-      })),
+      data,
     });
   }
 
