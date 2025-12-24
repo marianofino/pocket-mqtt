@@ -47,9 +47,19 @@ export class TelemetryService {
    * @deprecated Use getRepository() instead for Repository Pattern.
    */
   getPrisma(): import('@prisma/client').PrismaClient {
-    // Backwards compatibility for tests
-    const prismaRepo = this.repository as import('../repository/PrismaRepository.js').PrismaRepository;
-    return prismaRepo.getPrismaClient();
+    // Backwards compatibility for tests: only works with Prisma-backed repositories
+    const repoWithPrisma = this.repository as unknown as {
+      getPrismaClient?: () => import('@prisma/client').PrismaClient;
+    };
+
+    if (typeof repoWithPrisma.getPrismaClient === 'function') {
+      return repoWithPrisma.getPrismaClient();
+    }
+
+    throw new Error(
+      'getPrisma() is only available when using a Prisma-backed repository. ' +
+        'Use getRepository() for repository-agnostic access.',
+    );
   }
 
   /**
