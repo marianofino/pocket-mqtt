@@ -16,7 +16,7 @@ export interface TelemetryRecord extends TelemetryData {
 export interface DeviceTokenData {
   deviceId: string;
   token: string;
-  expiresAt?: Date | null;
+  expiresAt: Date | null;
 }
 
 export interface DeviceTokenRecord extends DeviceTokenData {
