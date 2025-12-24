@@ -16,6 +16,7 @@
 - **Multi-DB:** Use a Repository Pattern to abstract Prisma calls.
 - **Auth:** Device-token based (MQTT) & JWT (API).
 - **Performance:** SQLite WAL mode enabled for concurrent I/O.
+- **Prisma Client:** Always consume the generated `@prisma/client` package (via `npm run db:generate`) so both dev and build artifacts share the same schema delegates.
 
 ## 4. Security Implementation
 

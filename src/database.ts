@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { PrismaClient } from './generated/prisma/index.js';
+import { PrismaClient } from '@prisma/client';
 import { PrismaLibSql } from '@prisma/adapter-libsql';
 
 let prisma: PrismaClient | null = null;
@@ -23,7 +23,7 @@ export function getPrismaClient(): PrismaClient {
 
     // Enable WAL mode for SQLite using Prisma (safe - no user input)
     // This is done asynchronously but we don't wait for it to avoid blocking
-    prisma.$executeRaw`PRAGMA journal_mode=WAL;`.catch((err) => {
+  prisma.$executeRaw`PRAGMA journal_mode=WAL;`.catch((err: unknown) => {
       console.error('Failed to enable WAL mode:', err);
       // Note: We log the error but don't fail fast here to avoid breaking the synchronous API
       // WAL mode is an optimization, not a requirement
