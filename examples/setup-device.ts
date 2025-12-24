@@ -41,8 +41,8 @@ async function checkDatabaseSetup() {
     // Try to query the DeviceToken table to check if migrations are applied
     await prisma.deviceToken.findFirst();
     return true;
-  } catch (error: any) {
-    if (error.message && error.message.includes('no such table')) {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message.includes('no such table')) {
       console.error('✗ Database not initialized!\n');
       console.log('The DeviceToken table does not exist. Please run database migrations first:\n');
       console.log('  1. npx prisma migrate deploy');

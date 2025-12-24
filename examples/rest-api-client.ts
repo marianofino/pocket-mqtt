@@ -14,6 +14,13 @@ const API_BASE_URL = 'http://localhost:3000';
 const USERNAME = 'admin';
 const PASSWORD = 'admin123';
 
+interface TelemetryRecord {
+  id: number;
+  topic: string;
+  payload: string;
+  timestamp: string;
+}
+
 console.log('=== REST API Client Example ===\n');
 
 async function login(): Promise<string> {
@@ -85,7 +92,7 @@ async function getTelemetry(token: string) {
   
   if (data.data.length > 0) {
     console.log('  Sample records:');
-    data.data.slice(0, 3).forEach((record: any, index: number) => {
+    data.data.slice(0, 3).forEach((record: TelemetryRecord, index: number) => {
       console.log(`    ${index + 1}. Topic: ${record.topic}`);
       console.log(`       Payload: ${record.payload.substring(0, 50)}${record.payload.length > 50 ? '...' : ''}`);
       console.log(`       Time: ${record.timestamp}`);

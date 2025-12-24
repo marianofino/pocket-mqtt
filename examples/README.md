@@ -207,7 +207,7 @@ Then run the setup script again.
 ### REST API 401 Unauthorized
 - Verify you're using a valid JWT token
 - Check token hasn't expired (default: 1 hour)
-- Ensure you're using the `Authorization: ****** header
+- Ensure you're using the `Authorization: Bearer <token>` header
 
 ### Database Errors
 - Run migrations: `npx prisma migrate deploy`

@@ -1,5 +1,5 @@
 import Aedes from 'aedes';
-import type { AuthenticateError, Client } from 'aedes';
+import type { AuthenticateError, Client, PublishPacket } from 'aedes';
 import { createServer } from 'net';
 import Fastify from 'fastify';
 import fastifyJwt from '@fastify/jwt';
@@ -108,7 +108,7 @@ export class PocketMQTT {
     };
 
     // Authorize publish hook - validates device can publish to topic
-    this.aedes.authorizePublish = async (_client: Client | null, _packet: any, callback: (error?: Error | null) => void) => {
+    this.aedes.authorizePublish = async (_client: Client | null, _packet: PublishPacket, callback: (error?: Error | null) => void) => {
       // Allow publish if client is authenticated
       // Additional authorization logic could be added here (e.g., topic-based permissions)
       callback(null);
@@ -167,6 +167,15 @@ export class PocketMQTT {
     this.fastify.post('/api/v1/auth/login', async (request, reply): Promise<{ token: string } | void> => {
       const body = request.body as { username: string; password: string } | undefined;
       const { username, password } = body ?? {};
+      
+      // Validate input
+      if (!username || typeof username !== 'string' || username.trim().length === 0) {
+        return reply.code(400).send({ error: 'Username is required and must be a non-empty string' });
+      }
+      
+      if (!password || typeof password !== 'string' || password.trim().length === 0) {
+        return reply.code(400).send({ error: 'Password is required and must be a non-empty string' });
+      }
       
       // Demo authentication - In production, use proper user management with hashed passwords
       // Configure via environment variables: ADMIN_USERNAME and ADMIN_PASSWORD

@@ -22,10 +22,10 @@ model Telemetry {
 model DeviceToken {
   id        Int      @id @default(autoincrement())
   deviceId  String   @unique
-  tokenHash String   @unique
+  token     String   @unique
   createdAt DateTime @default(now())
   expiresAt DateTime?
   
-  @@index([tokenHash])
+  @@index([token])
   @@index([deviceId])
 }
