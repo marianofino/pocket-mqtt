@@ -254,25 +254,27 @@ export class PocketMQTT {
       }
       const db = this.telemetryService.getDb();
       
-      // Build query
-      let telemetryQuery = db.select()
-        .from(telemetrySchema)
-        .orderBy(desc(telemetrySchema.timestamp))
-        .limit(limit)
-        .offset(offset);
-
-      if (query.topic) {
-        telemetryQuery = telemetryQuery.where(eq(telemetrySchema.topic, query.topic)) as any;
-      }
-
-      const telemetryData = await telemetryQuery;
+      // Build query - separate queries for filtered and unfiltered cases
+      const telemetryData = query.topic
+        ? await db.select()
+            .from(telemetrySchema)
+            .where(eq(telemetrySchema.topic, query.topic))
+            .orderBy(desc(telemetrySchema.timestamp))
+            .limit(limit)
+            .offset(offset)
+        : await db.select()
+            .from(telemetrySchema)
+            .orderBy(desc(telemetrySchema.timestamp))
+            .limit(limit)
+            .offset(offset);
 
       // Count total records
-      let countQuery = db.select({ count: count() }).from(telemetrySchema);
-      if (query.topic) {
-        countQuery = countQuery.where(eq(telemetrySchema.topic, query.topic)) as any;
-      }
-      const totalResult = await countQuery;
+      const totalResult = query.topic
+        ? await db.select({ count: count() })
+            .from(telemetrySchema)
+            .where(eq(telemetrySchema.topic, query.topic))
+        : await db.select({ count: count() })
+            .from(telemetrySchema);
       const total = totalResult[0]?.count || 0;
 
       return {
