@@ -1,29 +1,29 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { connect } from 'mqtt';
 import { PocketMQTT } from '../index.js';
-import { getPrismaClient } from '../database.js';
+import { getDbClient } from '../database.js';
+import { telemetry as telemetrySchema, deviceToken as deviceTokenSchema } from '../db/schema.js';
+import { count, asc, eq } from 'drizzle-orm';
 
 describe('MQTT Telemetry Integration Tests', () => {
   let app: PocketMQTT;
-  let prisma: ReturnType<typeof getPrismaClient>;
+  let db: ReturnType<typeof getDbClient>;
   const MQTT_PORT = 1884;
   const API_PORT = 3001;
   const testDeviceId = 'test-device';
   const testDeviceToken = 'test-token-12345';
 
   beforeAll(async () => {
-    prisma = getPrismaClient();
+    db = getDbClient();
     
     // Clean up any existing data
-    await prisma.deviceToken.deleteMany();
-    await prisma.telemetry.deleteMany();
+    await db.delete(deviceTokenSchema);
+    await db.delete(telemetrySchema);
     
     // Create a test device token
-    await prisma.deviceToken.create({
-      data: {
-        deviceId: testDeviceId,
-        token: testDeviceToken
-      }
+    await db.insert(deviceTokenSchema).values({
+      deviceId: testDeviceId,
+      token: testDeviceToken
     });
     
     // Initialize PocketMQTT with both services
@@ -36,15 +36,15 @@ describe('MQTT Telemetry Integration Tests', () => {
 
   beforeEach(async () => {
     // Clean database before each test for isolation
-    await prisma.telemetry.deleteMany();
+    await db.delete(telemetrySchema);
   });
 
   afterAll(async () => {
     // Clean up data before stopping
-    await prisma.deviceToken.deleteMany();
-    await prisma.telemetry.deleteMany();
+    await db.delete(deviceTokenSchema);
+    await db.delete(telemetrySchema);
     
-    // Now stop the app (which will disconnect Prisma)
+    // Now stop the app (which will disconnect database)
     await app.stop();
   }, 15000);
 
@@ -70,19 +70,17 @@ describe('MQTT Telemetry Integration Tests', () => {
     await new Promise(resolve => setTimeout(resolve, 500));
 
     // Then: Messages should not be in database yet
-    let count = await prisma.telemetry.count();
-    expect(count).toBe(0);
+    let result = await db.select({ count: count() }).from(telemetrySchema);
+    expect(result[0].count).toBe(0);
 
     // Wait for flush (2+ seconds)
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     // Then: All messages should be flushed to database
-    count = await prisma.telemetry.count();
-    expect(count).toBe(5);
+    result = await db.select({ count: count() }).from(telemetrySchema);
+    expect(result[0].count).toBe(5);
 
-    const messages = await prisma.telemetry.findMany({
-      orderBy: { id: 'asc' }
-    });
+    const messages = await db.select().from(telemetrySchema).orderBy(asc(telemetrySchema.id));
     
     expect(messages[0].topic).toBe('test/topic0');
     expect(messages[0].payload).toBe('payload0');
@@ -120,8 +118,8 @@ describe('MQTT Telemetry Integration Tests', () => {
     await new Promise(resolve => setTimeout(resolve, 3000));
 
     // Then: All messages should be persisted
-    const count = await prisma.telemetry.count();
-    expect(count).toBe(150);
+    const result = await db.select({ count: count() }).from(telemetrySchema);
+    expect(result[0].count).toBe(150);
 
     client.end();
   }, 15000);
@@ -148,9 +146,7 @@ describe('MQTT Telemetry Integration Tests', () => {
     await new Promise(resolve => setTimeout(resolve, 2500));
 
     // Then: All regular topics should be stored
-    const messages = await prisma.telemetry.findMany({
-      orderBy: { id: 'asc' }
-    });
+    const messages = await db.select().from(telemetrySchema).orderBy(asc(telemetrySchema.id));
     expect(messages.length).toBeGreaterThanOrEqual(3);
     expect(messages.some(m => m.topic === 'sensor/temperature')).toBe(true);
     expect(messages.some(m => m.topic === 'sensor/humidity')).toBe(true);
@@ -162,7 +158,7 @@ describe('MQTT Telemetry Integration Tests', () => {
 
 describe('Telemetry API Endpoints', () => {
   let app: PocketMQTT;
-  let prisma: ReturnType<typeof getPrismaClient>;
+  let db: ReturnType<typeof getDbClient>;
   const MQTT_PORT = 1885;
   const API_PORT = 3002;
   let authToken: string;
@@ -182,10 +178,10 @@ describe('Telemetry API Endpoints', () => {
   }
 
   beforeAll(async () => {
-    prisma = getPrismaClient();
+    db = getDbClient();
     
     // Clean up any existing telemetry data
-    await prisma.telemetry.deleteMany();
+    await db.delete(telemetrySchema);
     
     // Initialize PocketMQTT
     app = new PocketMQTT({
@@ -200,14 +196,14 @@ describe('Telemetry API Endpoints', () => {
 
   beforeEach(async () => {
     // Clean database before each test for isolation
-    await prisma.telemetry.deleteMany();
+    await db.delete(telemetrySchema);
   });
 
   afterAll(async () => {
     // Clean up telemetry data before stopping
-    await prisma.telemetry.deleteMany();
+    await db.delete(telemetrySchema);
     
-    // Now stop the app (which will disconnect Prisma)
+    // Now stop the app (which will disconnect database)
     await app.stop();
   }, 15000);
 
@@ -234,9 +230,9 @@ describe('Telemetry API Endpoints', () => {
     await new Promise(resolve => setTimeout(resolve, 2500));
 
     // Verify data in database
-    const messages = await prisma.telemetry.findMany({
-      where: { topic: 'api/test/topic' }
-    });
+    const messages = await db.select()
+      .from(telemetrySchema)
+      .where(eq(telemetrySchema.topic, 'api/test/topic'));
     expect(messages).toHaveLength(1);
     expect(messages[0].payload).toBe('test payload from API');
   }, 10000);
@@ -263,13 +259,11 @@ describe('Telemetry API Endpoints', () => {
 
   it('should retrieve telemetry via GET /api/v1/telemetry', async () => {
     // Given: Some telemetry data in database
-    await prisma.telemetry.createMany({
-      data: [
-        { topic: 'test/topic1', payload: 'payload1', timestamp: new Date() },
-        { topic: 'test/topic2', payload: 'payload2', timestamp: new Date() },
-        { topic: 'test/topic3', payload: 'payload3', timestamp: new Date() },
-      ]
-    });
+    await db.insert(telemetrySchema).values([
+      { topic: 'test/topic1', payload: 'payload1', timestamp: new Date() },
+      { topic: 'test/topic2', payload: 'payload2', timestamp: new Date() },
+      { topic: 'test/topic3', payload: 'payload3', timestamp: new Date() },
+    ]);
 
     // When: GET telemetry data
     const response = await fetch(`http://localhost:${API_PORT}/api/v1/telemetry`, {
@@ -289,13 +283,11 @@ describe('Telemetry API Endpoints', () => {
 
   it('should filter telemetry by topic', async () => {
     // Given: Telemetry data with different topics
-    await prisma.telemetry.createMany({
-      data: [
-        { topic: 'sensor/temperature', payload: '25.5', timestamp: new Date() },
-        { topic: 'sensor/humidity', payload: '60', timestamp: new Date() },
-        { topic: 'sensor/temperature', payload: '26.0', timestamp: new Date() },
-      ]
-    });
+    await db.insert(telemetrySchema).values([
+      { topic: 'sensor/temperature', payload: '25.5', timestamp: new Date() },
+      { topic: 'sensor/humidity', payload: '60', timestamp: new Date() },
+      { topic: 'sensor/temperature', payload: '26.0', timestamp: new Date() },
+    ]);
 
     // When: GET telemetry filtered by topic
     const response = await fetch(`http://localhost:${API_PORT}/api/v1/telemetry?topic=sensor/temperature`, {
@@ -322,7 +314,7 @@ describe('Telemetry API Endpoints', () => {
         timestamp: new Date(Date.now() + i * 1000) // Spread timestamps
       });
     }
-    await prisma.telemetry.createMany({ data: records });
+    await db.insert(telemetrySchema).values(records);
 
     // When: GET with pagination
     const response = await fetch(`http://localhost:${API_PORT}/api/v1/telemetry?limit=10&offset=20`, {

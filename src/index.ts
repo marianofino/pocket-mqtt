@@ -6,7 +6,9 @@ import fastifyJwt from '@fastify/jwt';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { Server as NetServer } from 'net';
 import { TelemetryService } from './services/TelemetryService.js';
-import { disconnectPrisma, getPrismaClient } from './database.js';
+import { disconnectDb, getDbClient } from './database.js';
+import { deviceToken as deviceTokenSchema, telemetry as telemetrySchema } from './db/schema.js';
+import { eq, desc, count } from 'drizzle-orm';
 
 export interface PocketMQTTConfig {
   mqttPort?: number;
@@ -64,7 +66,7 @@ export class PocketMQTT {
   }
 
   private setupMQTTAuthentication(): void {
-    const prisma = getPrismaClient();
+    const db = getDbClient();
     
     // Authenticate hook - validates device tokens on connection
     this.aedes.authenticate = async (_client: Client, username: string | undefined, password: Buffer | undefined, callback: (error: AuthenticateError | null, success: boolean) => void) => {
@@ -78,23 +80,26 @@ export class PocketMQTT {
         const token = password.toString();
         
         // Look up device token in database
-        const deviceToken = await prisma.deviceToken.findUnique({
-          where: { token }
-        });
+        const deviceTokens = await db.select()
+          .from(deviceTokenSchema)
+          .where(eq(deviceTokenSchema.token, token))
+          .limit(1);
 
-        if (!deviceToken) {
+        const deviceTokenRecord = deviceTokens[0];
+
+        if (!deviceTokenRecord) {
           callback(null, false);
           return;
         }
 
         // Check if token matches the device ID
-        if (deviceToken.deviceId !== username) {
+        if (deviceTokenRecord.deviceId !== username) {
           callback(null, false);
           return;
         }
 
         // Check if token is expired
-        if (deviceToken.expiresAt && deviceToken.expiresAt < new Date()) {
+        if (deviceTokenRecord.expiresAt && deviceTokenRecord.expiresAt < new Date()) {
           callback(null, false);
           return;
         }
@@ -247,21 +252,31 @@ export class PocketMQTT {
         }
         offset = parsedOffset;
       }
-      const prisma = this.telemetryService.getPrisma();
+      const db = this.telemetryService.getDb();
       
-      const where = query.topic ? { topic: query.topic } : {};
-      
-      const telemetry = await prisma.telemetry.findMany({
-        where,
-        orderBy: { timestamp: 'desc' },
-        take: limit,
-        skip: offset,
-      });
+      // Build query
+      let telemetryQuery = db.select()
+        .from(telemetrySchema)
+        .orderBy(desc(telemetrySchema.timestamp))
+        .limit(limit)
+        .offset(offset);
 
-      const total = await prisma.telemetry.count({ where });
+      if (query.topic) {
+        telemetryQuery = telemetryQuery.where(eq(telemetrySchema.topic, query.topic)) as any;
+      }
+
+      const telemetryData = await telemetryQuery;
+
+      // Count total records
+      let countQuery = db.select({ count: count() }).from(telemetrySchema);
+      if (query.topic) {
+        countQuery = countQuery.where(eq(telemetrySchema.topic, query.topic)) as any;
+      }
+      const totalResult = await countQuery;
+      const total = totalResult[0]?.count || 0;
 
       return {
-        data: telemetry,
+        data: telemetryData,
         pagination: {
           total,
           limit,
@@ -349,9 +364,9 @@ export class PocketMQTT {
       errors.push(err instanceof Error ? err : new Error(String(err)));
     }
 
-    // Disconnect Prisma
+    // Disconnect database
     try {
-      await disconnectPrisma();
+      await disconnectDb();
     } catch (err) {
       errors.push(err instanceof Error ? err : new Error(String(err)));
     }
