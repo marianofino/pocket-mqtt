@@ -82,7 +82,7 @@ export class PocketMQTT {
         const token = password.toString();
         
         // Look up device token in database based on adapter
-        let deviceTokenRecord: any;
+        let deviceTokenRecord: { deviceId: string; token: string; expiresAt: Date | null } | undefined;
         if (adapter === 'postgres') {
           const db = getDbClient() as import('drizzle-orm/postgres-js').PostgresJsDatabase<typeof import('./db/schema.pg.js')>;
           const results = await db.select()
