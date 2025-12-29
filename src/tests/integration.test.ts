@@ -10,15 +10,15 @@ describe('PocketMQTT Integration Tests', () => {
   const testDeviceToken = 'integration-test-token';
 
   beforeAll(async () => {
-    const prisma = (await import('../database.js')).getPrismaClient();
+    const { getDbClient } = await import('../database.js');
+    const { deviceToken } = await import('../db/schema.js');
+    const db = getDbClient();
     
     // Clean up and create test device token
-    await prisma.deviceToken.deleteMany();
-    await prisma.deviceToken.create({
-      data: {
-        deviceId: testDeviceId,
-        token: testDeviceToken
-      }
+    await db.delete(deviceToken);
+    await db.insert(deviceToken).values({
+      deviceId: testDeviceId,
+      token: testDeviceToken
     });
     
     // Initialize PocketMQTT with both services
@@ -30,8 +30,10 @@ describe('PocketMQTT Integration Tests', () => {
   });
 
   afterAll(async () => {
-    const prisma = (await import('../database.js')).getPrismaClient();
-    await prisma.deviceToken.deleteMany();
+    const { getDbClient } = await import('../database.js');
+    const { deviceToken } = await import('../db/schema.js');
+    const db = getDbClient();
+    await db.delete(deviceToken);
     await app.stop();
   });
 

@@ -15,9 +15,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "db:migrate": "prisma migrate dev",
-    "db:generate": "prisma generate",
-    "db:studio": "prisma studio"
+    "db:migrate": "drizzle-kit migrate",
+    "db:generate": "drizzle-kit generate",
+    "db:studio": "drizzle-kit studio",
+    "db:push": "drizzle-kit push"
   },
   "keywords": [
     "mqtt",
@@ -30,17 +31,18 @@
   "license": "ISC",
   "dependencies": {
     "@fastify/jwt": "^10.0.0",
-    "@prisma/adapter-libsql": "^7.2.0",
-    "@prisma/client": "^7.2.0",
     "aedes": "^0.51.3",
+    "better-sqlite3": "^12.5.0",
     "dotenv": "^17.2.3",
+    "drizzle-orm": "^0.45.1",
     "fastify": "^5.6.2"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.0.3",
     "@vitest/coverage-v8": "^4.0.16",
+    "drizzle-kit": "^0.31.8",
     "mqtt": "^5.14.1",
-    "prisma": "^7.2.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.16"

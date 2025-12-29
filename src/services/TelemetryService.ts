@@ -1,5 +1,7 @@
-import { getPrismaClient } from '../database.js';
-import type { PrismaClient } from '@prisma/client';
+import { getDbClient } from '../database.js';
+import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import * as schema from '../db/schema.js';
+import { telemetry } from '../db/schema.js';
 
 interface TelemetryMessage {
   topic: string;
@@ -23,20 +25,20 @@ export class TelemetryService {
   private readonly maxBufferSize = 100; // Max messages before forced flush
   private readonly maxRetries = 3; // Max retry attempts for failed flushes
   private retryCount = 0; // Current retry count
-  private prisma: PrismaClient;
+  private db: BetterSQLite3Database<typeof schema>;
   private isRunning = true;
   private isFlushing = false;
 
   constructor() {
-    this.prisma = getPrismaClient();
+    this.db = getDbClient();
     this.startFlushTimer();
   }
 
   /**
-   * Get the Prisma client instance for database operations.
+   * Get the database client instance for database operations.
    */
-  getPrisma(): PrismaClient {
-    return this.prisma;
+  getDb(): BetterSQLite3Database<typeof schema> {
+    return this.db;
   }
 
   /**
@@ -82,13 +84,13 @@ export class TelemetryService {
 
     try {
       // Batch insert all messages in a single transaction
-      await this.prisma.telemetry.createMany({
-        data: messagesToFlush.map(msg => ({
+      await this.db.insert(telemetry).values(
+        messagesToFlush.map(msg => ({
           topic: msg.topic,
           payload: msg.payload,
           timestamp: msg.timestamp,
-        })),
-      });
+        }))
+      );
 
       // Reset retry count on successful flush
       this.retryCount = 0;

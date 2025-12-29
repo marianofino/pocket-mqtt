@@ -5,7 +5,6 @@ coverage/
 *.log
 .env
 .DS_Store
-/src/generated/prisma
 *.db
 *.db-journal
 *.db-wal

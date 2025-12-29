@@ -2,20 +2,22 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { connect } from 'mqtt';
 import type { MqttClient } from 'mqtt';
 import { PocketMQTT } from '../index.js';
-import { getPrismaClient } from '../database.js';
+import { getDbClient } from '../database.js';
+import { telemetry as telemetrySchema, deviceToken as deviceTokenSchema } from '../db/schema.js';
+import { eq } from 'drizzle-orm';
 
 describe('MQTT Security - Device Token Authentication', () => {
   let app: PocketMQTT;
-  let prisma: ReturnType<typeof getPrismaClient>;
+  let db: ReturnType<typeof getDbClient>;
   const MQTT_PORT = 1886;
   const API_PORT = 3003;
 
   beforeAll(async () => {
-    prisma = getPrismaClient();
+    db = getDbClient();
     
     // Clean up any existing data
-    await prisma.deviceToken.deleteMany();
-    await prisma.telemetry.deleteMany();
+    await db.delete(deviceTokenSchema);
+    await db.delete(telemetrySchema);
     
     // Initialize PocketMQTT with security enabled
     app = new PocketMQTT({
@@ -27,14 +29,14 @@ describe('MQTT Security - Device Token Authentication', () => {
 
   beforeEach(async () => {
     // Clean database before each test for isolation
-    await prisma.deviceToken.deleteMany();
-    await prisma.telemetry.deleteMany();
+    await db.delete(deviceTokenSchema);
+    await db.delete(telemetrySchema);
   });
 
   afterAll(async () => {
     // Clean up data before stopping
-    await prisma.deviceToken.deleteMany();
-    await prisma.telemetry.deleteMany();
+    await db.delete(deviceTokenSchema);
+    await db.delete(telemetrySchema);
     
     // Stop the app
     await app.stop();
@@ -113,11 +115,9 @@ describe('MQTT Security - Device Token Authentication', () => {
     const deviceId = 'sensor-001';
     const validToken = 'valid-device-token-abc123';
     
-    await prisma.deviceToken.create({
-      data: {
-        deviceId,
-        token: validToken,
-      }
+    await db.insert(deviceTokenSchema).values({
+      deviceId,
+      token: validToken,
     });
 
     // When: An MQTT client connects with valid credentials
@@ -157,9 +157,9 @@ describe('MQTT Security - Device Token Authentication', () => {
     await new Promise(resolve => setTimeout(resolve, 2500));
     
     // Verify message was stored
-    const messages = await prisma.telemetry.findMany({
-      where: { topic: 'sensor/temperature' }
-    });
+    const messages = await db.select()
+      .from(telemetrySchema)
+      .where(eq(telemetrySchema.topic, 'sensor/temperature'));
     expect(messages.length).toBeGreaterThan(0);
     expect(messages[0].payload).toBe('25.5');
     
@@ -171,12 +171,10 @@ describe('MQTT Security - Device Token Authentication', () => {
     const deviceId = 'sensor-002';
     const expiredToken = 'expired-token-xyz789';
     
-    await prisma.deviceToken.create({
-      data: {
-        deviceId,
-        token: expiredToken,
-        expiresAt: new Date(Date.now() - 86400000) // Expired 1 day ago
-      }
+    await db.insert(deviceTokenSchema).values({
+      deviceId,
+      token: expiredToken,
+      expiresAt: new Date(Date.now() - 86400000) // Expired 1 day ago
     });
 
     // When: An MQTT client connects with expired token
@@ -211,15 +209,15 @@ describe('MQTT Security - Device Token Authentication', () => {
 
 describe('REST API Security - JWT Authentication', () => {
   let app: PocketMQTT;
-  let prisma: ReturnType<typeof getPrismaClient>;
+  let db: ReturnType<typeof getDbClient>;
   const MQTT_PORT = 1887;
   const API_PORT = 3004;
 
   beforeAll(async () => {
-    prisma = getPrismaClient();
+    db = getDbClient();
     
     // Clean up any existing data
-    await prisma.telemetry.deleteMany();
+    await db.delete(telemetrySchema);
     
     // Initialize PocketMQTT
     app = new PocketMQTT({
@@ -231,12 +229,12 @@ describe('REST API Security - JWT Authentication', () => {
 
   beforeEach(async () => {
     // Clean database before each test for isolation
-    await prisma.telemetry.deleteMany();
+    await db.delete(telemetrySchema);
   });
 
   afterAll(async () => {
     // Clean up data before stopping
-    await prisma.telemetry.deleteMany();
+    await db.delete(telemetrySchema);
     
     // Stop the app
     await app.stop();

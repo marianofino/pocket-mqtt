@@ -1,7 +1,7 @@
 # Agent Rules: PocketMQTT
 
 ## Project Description
-**PocketMQTT** is a lightweight, "API-first" IoT platform designed for zero-config deployment via `npx`. It integrates an MQTT broker (Aedes), a high-performance API (Fastify), and a database (Prisma with SQLite/Postgres).
+**PocketMQTT** is a lightweight, "API-first" IoT platform designed for zero-config deployment via `npx`. It integrates an MQTT broker (Aedes), a high-performance API (Fastify), and a database (Drizzle ORM with SQLite/Postgres).
 
 ## Your Role
 You are the Lead Architect. Your goal is to keep the platform minimal, fast, and developer-friendly.

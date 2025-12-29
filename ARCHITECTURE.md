@@ -3,7 +3,7 @@
 ## 1. Stack
 - **Engine:** Node.js (v20+) + Fastify.
 - **Broker:** Aedes (integrated).
-- **ORM:** Prisma (SQLite by default / PostgreSQL via ENV).
+- **ORM:** Drizzle ORM (SQLite by default / PostgreSQL via ENV).
 - **Testing:** Vitest + Supertest (for API testing).
 - **Security:** JWT (REST API) + Device Token (MQTT).
 
@@ -13,10 +13,10 @@
 3. **API:** Fastify exposes `/telemetry` and `/devices` for history and control.
 
 ## 3. Key Decisions
-- **Multi-DB:** Use a Repository Pattern to abstract Prisma calls.
+- **Multi-DB:** Use a Repository Pattern to abstract database calls.
 - **Auth:** Device-token based (MQTT) & JWT (API).
 - **Performance:** SQLite WAL mode enabled for concurrent I/O.
-- **Prisma Client:** Always consume the generated `@prisma/client` package (via `npm run db:generate`) so both dev and build artifacts share the same schema delegates.
+- **Drizzle ORM:** Schema-first approach with type-safe queries and automatic migrations.
 
 ## 4. Security Implementation
 

@@ -1,21 +1,23 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { TelemetryService } from '../services/TelemetryService.js';
-import { getPrismaClient, disconnectPrisma } from '../database.js';
+import { getDbClient, disconnectDb } from '../database.js';
+import { telemetry as telemetrySchema } from '../db/schema.js';
+import { count } from 'drizzle-orm';
 
 describe('TelemetryService', () => {
   let service: TelemetryService;
-  let prisma: ReturnType<typeof getPrismaClient>;
+  let db: ReturnType<typeof getDbClient>;
 
   beforeAll(async () => {
     // Start with a clean database
-    prisma = getPrismaClient();
-    await prisma.telemetry.deleteMany();
+    db = getDbClient();
+    await db.delete(telemetrySchema);
   });
 
   beforeEach(async () => {
     // Clean database before each test
-    prisma = getPrismaClient();
-    await prisma.telemetry.deleteMany();
+    db = getDbClient();
+    await db.delete(telemetrySchema);
     
     service = new TelemetryService();
   });
@@ -23,14 +25,14 @@ describe('TelemetryService', () => {
   afterEach(async () => {
     // Stop the service and clean up
     await service.stop();
-    await prisma.telemetry.deleteMany();
+    await db.delete(telemetrySchema);
     
     // Small delay to allow flush timers to fully stop
     await new Promise(resolve => setTimeout(resolve, 100));
   });
 
   afterAll(async () => {
-    await disconnectPrisma();
+    await disconnectDb();
   });
 
   describe('Buffering', () => {
@@ -42,8 +44,8 @@ describe('TelemetryService', () => {
       await service.addMessage('test/topic3', 'payload3');
 
       // Then: Messages should be buffered, not in database yet
-      const count = await prisma.telemetry.count();
-      expect(count).toBe(0);
+      const result = await db.select({ count: count() }).from(telemetrySchema);
+      expect(result[0].count).toBe(0);
     });
 
     it('should buffer 10 MQTT messages in rapid succession', async () => {
@@ -54,8 +56,8 @@ describe('TelemetryService', () => {
       }
 
       // Then: They are buffered in memory
-      const count = await prisma.telemetry.count();
-      expect(count).toBe(0);
+      const result = await db.select({ count: count() }).from(telemetrySchema);
+      expect(result[0].count).toBe(0);
     });
   });
 
@@ -70,7 +72,7 @@ describe('TelemetryService', () => {
       // Then: After 2+ seconds, all messages are flushed
       await new Promise(resolve => setTimeout(resolve, 2100));
 
-      const messages = await prisma.telemetry.findMany();
+      const messages = await db.select().from(telemetrySchema);
       expect(messages).toHaveLength(3);
       expect(messages[0].topic).toBe('test/topic1');
       expect(messages[0].payload).toBe('payload1');
@@ -86,14 +88,14 @@ describe('TelemetryService', () => {
       }
 
       // Check they're buffered
-      let count = await prisma.telemetry.count();
-      expect(count).toBe(0);
+      let result = await db.select({ count: count() }).from(telemetrySchema);
+      expect(result[0].count).toBe(0);
 
       // Then: After 2 seconds, all 10 are flushed together
       await new Promise(resolve => setTimeout(resolve, 2100));
 
-      count = await prisma.telemetry.count();
-      expect(count).toBe(10);
+      result = await db.select({ count: count() }).from(telemetrySchema);
+      expect(result[0].count).toBe(10);
     });
 
     it('should handle manual flush', async () => {
@@ -105,7 +107,7 @@ describe('TelemetryService', () => {
       await service.flush();
 
       // Then: Messages should be in database
-      const messages = await prisma.telemetry.findMany();
+      const messages = await db.select().from(telemetrySchema);
       expect(messages).toHaveLength(2);
     });
   });
@@ -132,8 +134,8 @@ describe('TelemetryService', () => {
       await new Promise(resolve => setTimeout(resolve, 2100));
 
       // All messages should be persisted
-      const count = await prisma.telemetry.count();
-      expect(count).toBe(messageCount);
+      const result = await db.select({ count: count() }).from(telemetrySchema);
+      expect(result[0].count).toBe(messageCount);
     }, 10000); // Extend timeout for this test
 
     it('should continue accepting messages during flush', async () => {
@@ -154,8 +156,8 @@ describe('TelemetryService', () => {
       await new Promise(resolve => setTimeout(resolve, 2100));
 
       // Then: All messages should eventually be persisted
-      const count = await prisma.telemetry.count();
-      expect(count).toBe(200);
+      const result = await db.select({ count: count() }).from(telemetrySchema);
+      expect(result[0].count).toBe(200);
     }, 10000);
   });
 
@@ -167,8 +169,8 @@ describe('TelemetryService', () => {
       // Force a flush
       await service.flush();
       
-      const count = await prisma.telemetry.count();
-      expect(count).toBeGreaterThanOrEqual(0);
+      const result = await db.select({ count: count() }).from(telemetrySchema);
+      expect(result[0].count).toBeGreaterThanOrEqual(0);
     });
   });
 });
