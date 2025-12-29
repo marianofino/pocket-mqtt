@@ -4,21 +4,31 @@
 - **Engine:** Node.js (v20+) + Fastify.
 - **Broker:** Aedes (integrated).
 - **ORM:** Drizzle ORM (SQLite by default / PostgreSQL via ENV).
+- **Validation:** Zod for schema validation of MQTT payloads.
 - **Testing:** Vitest + Supertest (for API testing).
 - **Security:** JWT (REST API) + Device Token (MQTT).
 
 ## 2. Data Flow
-1. **Ingestion:** MQTT Topic -> Memory Buffer (fastq).
-2. **Batching:** Flush buffer to DB every 2s or 100 messages.
+1. **Ingestion:** MQTT Topic -> Zod Validation -> Memory Buffer (fastq).
+2. **Batching:** Flush buffer to DB every 2s or 100 messages via Repository Pattern.
 3. **API:** Fastify exposes `/telemetry` and `/devices` for history and control.
 
 ## 3. Key Decisions
-- **Multi-DB:** Use a Repository Pattern to abstract database calls.
+- **Multi-DB:** Use a Repository Pattern to abstract database calls. Supports SQLite (default) and PostgreSQL (via `DB_ADAPTER=postgres`).
+- **Validation:** Zod validates incoming MQTT payloads; malformed messages are rejected early.
 - **Auth:** Device-token based (MQTT) & JWT (API).
-- **Performance:** SQLite WAL mode enabled for concurrent I/O.
+- **Performance:** SQLite WAL mode enabled for concurrent I/O; PostgreSQL uses connection pooling.
 - **Drizzle ORM:** Schema-first approach with type-safe queries and automatic migrations.
 
-## 4. Security Implementation
+## 4. Repository Pattern
+- **Interface:** `MessageRepository` defines core operations (insertBatch, findMany, count, deleteAll).
+- **Implementations:** 
+  - `SQLiteMessageRepository` for SQLite (better-sqlite3 driver)
+  - `PostgresMessageRepository` for PostgreSQL (postgres.js driver)
+- **Factory:** `createMessageRepository()` selects implementation based on `DB_ADAPTER` env variable.
+- **Adapter Selection:** Set `DB_ADAPTER=postgres` or `DB_ADAPTER=sqlite` (default).
+
+## 5. Security Implementation
 
 ### MQTT Security (Device Token Authentication)
 - **Authentication Hook:** Validates device tokens on MQTT connection

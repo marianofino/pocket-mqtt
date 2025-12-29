@@ -7,8 +7,10 @@ A lightweight, API-first IoT platform with MQTT broker and REST API running in a
 - 🚀 **MQTT Broker**: Aedes-based MQTT broker on port 1883
 - 🌐 **REST API**: Fastify-based API on port 3000
 - 🔒 **Security**: JWT authentication for REST API, Device token validation for MQTT
+- ✅ **Validation**: Zod schema validation for MQTT payloads (rejects malformed messages)
 - 📊 **Telemetry Storage**: Efficient data persistence with batching (2s interval, >1000 msg/min capacity)
-- 💾 **SQLite WAL Mode**: Concurrent I/O for high-performance writes
+- 💾 **Multi-DB Support**: SQLite (WAL mode) or PostgreSQL via Repository Pattern
+- 🏗️ **Repository Pattern**: Abstract database operations for easy DB switching
 - 📦 **ESM + TypeScript**: Modern JavaScript with full type safety
 - 🧪 **TDD-Enabled**: Vitest for testing with built-in coverage
 - ⚡ **Single Process**: Both services in one lightweight process
@@ -25,15 +27,28 @@ npm install
 
 ## Database Setup
 
-The platform uses Drizzle ORM with SQLite (WAL mode) for telemetry storage:
+The platform uses Drizzle ORM with **SQLite (default)** or **PostgreSQL** for telemetry storage:
 
+### SQLite (Default)
 ```bash
-# Generate migrations (if schema changes)
-npm run db:generate
-
-# Push schema to database
+# Push schema to SQLite database
 npm run db:push
 ```
+
+### PostgreSQL (Optional)
+```bash
+# Set environment variables
+export DB_ADAPTER=postgres
+export DATABASE_URL="postgresql://username:password@localhost:5432/pocket_mqtt"
+
+# Create database
+createdb pocket_mqtt
+
+# Apply PostgreSQL migrations
+psql -d pocket_mqtt -f drizzle-pg/0000_initial.sql
+```
+
+See `drizzle-pg/README.md` for detailed PostgreSQL setup instructions.
 
 ## Development
 
