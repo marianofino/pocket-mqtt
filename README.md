@@ -25,14 +25,14 @@ npm install
 
 ## Database Setup
 
-The platform uses Prisma with SQLite (WAL mode) for telemetry storage:
+The platform uses Drizzle ORM with SQLite (WAL mode) for telemetry storage:
 
 ```bash
-# Run migrations
-npx prisma migrate dev
+# Generate migrations (if schema changes)
+npm run db:generate
 
-# Generate Prisma client
-npx prisma generate
+# Push schema to database
+npm run db:push
 ```
 
 ## Development
