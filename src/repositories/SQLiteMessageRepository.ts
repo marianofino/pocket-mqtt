@@ -1,6 +1,5 @@
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import type { MessageRepository } from './MessageRepository.interface.js';
-import type { Telemetry, NewTelemetry } from '../db/schema.js';
+import type { MessageRepository, Telemetry, NewTelemetry } from './MessageRepository.interface.js';
 import { telemetry } from '../db/schema.js';
 import { eq, desc, count as drizzleCount } from 'drizzle-orm';
 import * as schema from '../db/schema.js';
@@ -33,7 +32,7 @@ export class SQLiteMessageRepository implements MessageRepository {
         .where(eq(telemetry.topic, topic))
         .orderBy(desc(telemetry.timestamp))
         .limit(limit)
-        .offset(offset);
+        .offset(offset) as Telemetry[];
     }
 
     return await this.db
@@ -41,7 +40,7 @@ export class SQLiteMessageRepository implements MessageRepository {
       .from(telemetry)
       .orderBy(desc(telemetry.timestamp))
       .limit(limit)
-      .offset(offset);
+      .offset(offset) as Telemetry[];
   }
 
   async count(topic?: string): Promise<number> {

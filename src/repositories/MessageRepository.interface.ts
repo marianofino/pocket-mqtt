@@ -1,4 +1,21 @@
-import type { Telemetry, NewTelemetry } from '../db/schema.js';
+/**
+ * Telemetry message record from database.
+ */
+export interface Telemetry {
+  id: number;
+  topic: string;
+  payload: string;
+  timestamp: Date;
+}
+
+/**
+ * New telemetry message to insert.
+ */
+export interface NewTelemetry {
+  topic: string;
+  payload: string;
+  timestamp: Date;
+}
 
 /**
  * Repository interface for telemetry message storage.
