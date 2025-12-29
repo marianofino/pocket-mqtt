@@ -38,6 +38,9 @@ export function getDbClient(): BetterSQLite3Database<typeof schema> {
  * Reset the database client singleton (for testing).
  */
 export function resetDbClient(): void {
+  if (sqlite) {
+    sqlite.close();
+  }
   db = null;
   sqlite = null;
 }
