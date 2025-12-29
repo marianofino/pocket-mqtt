@@ -1,7 +1,5 @@
-import { getDbClient } from '../database.js';
-import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import * as schema from '../db/schema.js';
-import { telemetry } from '../db/schema.js';
+import { createMessageRepository } from '../repositories/repository.factory.js';
+import type { MessageRepository } from '../repositories/MessageRepository.interface.js';
 
 interface TelemetryMessage {
   topic: string;
@@ -16,7 +14,8 @@ interface TelemetryMessage {
  * - Buffers incoming MQTT messages in memory
  * - Flushes to database every 2 seconds or 100 messages (whichever comes first)
  * - Supports >1000 msg/min capacity
- * - Uses SQLite WAL mode for concurrent I/O
+ * - Uses Repository Pattern to abstract database operations
+ * - Supports both SQLite (WAL mode) and PostgreSQL
  */
 export class TelemetryService {
   private buffer: TelemetryMessage[] = [];
@@ -25,20 +24,20 @@ export class TelemetryService {
   private readonly maxBufferSize = 100; // Max messages before forced flush
   private readonly maxRetries = 3; // Max retry attempts for failed flushes
   private retryCount = 0; // Current retry count
-  private db: BetterSQLite3Database<typeof schema>;
+  private repository: MessageRepository;
   private isRunning = true;
   private isFlushing = false;
 
   constructor() {
-    this.db = getDbClient();
+    this.repository = createMessageRepository();
     this.startFlushTimer();
   }
 
   /**
-   * Get the database client instance for database operations.
+   * Get the repository instance for database operations.
    */
-  getDb(): BetterSQLite3Database<typeof schema> {
-    return this.db;
+  getRepository(): MessageRepository {
+    return this.repository;
   }
 
   /**
@@ -83,8 +82,8 @@ export class TelemetryService {
     this.buffer = [];
 
     try {
-      // Batch insert all messages in a single transaction
-      await this.db.insert(telemetry).values(
+      // Batch insert all messages using repository
+      await this.repository.insertBatch(
         messagesToFlush.map(msg => ({
           topic: msg.topic,
           payload: msg.payload,

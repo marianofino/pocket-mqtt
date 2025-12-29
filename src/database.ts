@@ -1,24 +1,70 @@
 import 'dotenv/config';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
+import { drizzle as drizzleSqlite } from 'drizzle-orm/better-sqlite3';
+import { drizzle as drizzlePostgres } from 'drizzle-orm/postgres-js';
 import Database from 'better-sqlite3';
+import postgres from 'postgres';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import * as schema from './db/schema.js';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import * as schemaSqlite from './db/schema.js';
+import * as schemaPg from './db/schema.pg.js';
 
-let db: BetterSQLite3Database<typeof schema> | null = null;
+type DbClient = BetterSQLite3Database<typeof schemaSqlite> | PostgresJsDatabase<typeof schemaPg>;
+type DbAdapter = 'sqlite' | 'postgres';
+
+let db: DbClient | null = null;
 let sqlite: Database.Database | null = null;
+let pgClient: ReturnType<typeof postgres> | null = null;
+let currentAdapter: DbAdapter | null = null;
+
+/**
+ * Get the database adapter from environment variable.
+ * Defaults to 'sqlite' if not specified.
+ */
+export function getDbAdapter(): DbAdapter {
+  const adapter = process.env.DB_ADAPTER?.toLowerCase();
+  return adapter === 'postgres' || adapter === 'postgresql' ? 'postgres' : 'sqlite';
+}
 
 /**
  * Get or create a singleton Drizzle client instance.
- * Enables WAL mode for SQLite for concurrent I/O as per ARCHITECTURE.md.
+ * Supports both SQLite and PostgreSQL based on DB_ADAPTER environment variable.
+ * 
+ * For SQLite: Enables WAL mode for concurrent I/O as per ARCHITECTURE.md.
+ * For PostgreSQL: Uses connection pooling via postgres.js.
  */
-export function getDbClient(): BetterSQLite3Database<typeof schema> {
-  if (!db) {
-    // Extract database path from environment variable
+export function getDbClient(): DbClient {
+  const adapter = getDbAdapter();
+  
+  // If client exists and adapter hasn't changed, return it
+  if (db && currentAdapter === adapter) {
+    return db;
+  }
+  
+  // Clean up old client if adapter changed
+  if (db && currentAdapter !== adapter) {
+    if (sqlite) {
+      sqlite.close();
+      sqlite = null;
+    }
+    if (pgClient) {
+      pgClient.end({ timeout: 5 });
+      pgClient = null;
+    }
+    db = null;
+  }
+  
+  currentAdapter = adapter;
+  
+  if (adapter === 'postgres') {
+    // PostgreSQL connection
+    const connectionString = process.env.DATABASE_URL || 'postgresql://localhost:5432/pocket_mqtt';
+    pgClient = postgres(connectionString);
+    db = drizzlePostgres(pgClient, { schema: schemaPg });
+  } else {
+    // SQLite connection (default)
     const dbPath = process.env.DATABASE_URL?.replace('file:', '').split('?')[0] || './dev.db';
-
-    // Create SQLite connection
     sqlite = new Database(dbPath);
-
+    
     // Enable WAL mode for SQLite for concurrent I/O
     try {
       sqlite.pragma('journal_mode = WAL');
@@ -27,10 +73,10 @@ export function getDbClient(): BetterSQLite3Database<typeof schema> {
       // Note: We log the error but don't fail fast here
       // WAL mode is an optimization, not a requirement
     }
-
-    // Initialize Drizzle client with schema
-    db = drizzle(sqlite, { schema });
+    
+    db = drizzleSqlite(sqlite, { schema: schemaSqlite });
   }
+  
   return db;
 }
 
@@ -40,9 +86,14 @@ export function getDbClient(): BetterSQLite3Database<typeof schema> {
 export function resetDbClient(): void {
   if (sqlite) {
     sqlite.close();
+    sqlite = null;
+  }
+  if (pgClient) {
+    pgClient.end({ timeout: 5 });
+    pgClient = null;
   }
   db = null;
-  sqlite = null;
+  currentAdapter = null;
 }
 
 /**
@@ -52,6 +103,11 @@ export async function disconnectDb(): Promise<void> {
   if (sqlite) {
     sqlite.close();
     sqlite = null;
-    db = null;
   }
+  if (pgClient) {
+    await pgClient.end({ timeout: 5 });
+    pgClient = null;
+  }
+  db = null;
+  currentAdapter = null;
 }

@@ -6,9 +6,11 @@ import fastifyJwt from '@fastify/jwt';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { Server as NetServer } from 'net';
 import { TelemetryService } from './services/TelemetryService.js';
-import { disconnectDb, getDbClient } from './database.js';
-import { deviceToken as deviceTokenSchema, telemetry as telemetrySchema } from './db/schema.js';
-import { eq, desc, count } from 'drizzle-orm';
+import { disconnectDb, getDbClient, getDbAdapter } from './database.js';
+import { deviceToken as deviceTokenSchema } from './db/schema.js';
+import { deviceToken as deviceTokenSchemaPg } from './db/schema.pg.js';
+import { eq } from 'drizzle-orm';
+import { MqttPayloadSchema } from './validation/mqtt-payload.schema.js';
 
 export interface PocketMQTTConfig {
   mqttPort?: number;
@@ -66,7 +68,7 @@ export class PocketMQTT {
   }
 
   private setupMQTTAuthentication(): void {
-    const db = getDbClient();
+    const adapter = getDbAdapter();
     
     // Authenticate hook - validates device tokens on connection
     this.aedes.authenticate = async (_client: Client, username: string | undefined, password: Buffer | undefined, callback: (error: AuthenticateError | null, success: boolean) => void) => {
@@ -79,13 +81,23 @@ export class PocketMQTT {
       try {
         const token = password.toString();
         
-        // Look up device token in database
-        const deviceTokens = await db.select()
-          .from(deviceTokenSchema)
-          .where(eq(deviceTokenSchema.token, token))
-          .limit(1);
-
-        const deviceTokenRecord = deviceTokens[0];
+        // Look up device token in database based on adapter
+        let deviceTokenRecord: any;
+        if (adapter === 'postgres') {
+          const db = getDbClient() as import('drizzle-orm/postgres-js').PostgresJsDatabase<typeof import('./db/schema.pg.js')>;
+          const results = await db.select()
+            .from(deviceTokenSchemaPg)
+            .where(eq(deviceTokenSchemaPg.token, token))
+            .limit(1);
+          deviceTokenRecord = results[0];
+        } else {
+          const db = getDbClient() as import('drizzle-orm/better-sqlite3').BetterSQLite3Database<typeof import('./db/schema.js')>;
+          const results = await db.select()
+            .from(deviceTokenSchema)
+            .where(eq(deviceTokenSchema.token, token))
+            .limit(1);
+          deviceTokenRecord = results[0];
+        }
 
         if (!deviceTokenRecord) {
           callback(null, false);
@@ -135,10 +147,23 @@ export class PocketMQTT {
         return;
       }
       
+      const payloadString = packet.payload.toString();
+      
+      // Validate message with Zod schema
+      const validation = MqttPayloadSchema.safeParse({
+        topic: packet.topic,
+        payload: payloadString,
+      });
+      
+      if (!validation.success) {
+        console.warn(`Rejected MQTT message on topic ${packet.topic}: validation failed`, validation.error.issues);
+        return;
+      }
+      
       // Buffer the message for batch writing (fire and forget for performance)
       this.telemetryService.addMessage(
         packet.topic,
-        packet.payload.toString()
+        payloadString
       ).catch(err => {
         // Log errors but don't block MQTT message flow
         console.error('Error buffering telemetry message:', err);
@@ -252,30 +277,18 @@ export class PocketMQTT {
         }
         offset = parsedOffset;
       }
-      const db = this.telemetryService.getDb();
       
-      // Build query - separate queries for filtered and unfiltered cases
-      const telemetryData = query.topic
-        ? await db.select()
-            .from(telemetrySchema)
-            .where(eq(telemetrySchema.topic, query.topic))
-            .orderBy(desc(telemetrySchema.timestamp))
-            .limit(limit)
-            .offset(offset)
-        : await db.select()
-            .from(telemetrySchema)
-            .orderBy(desc(telemetrySchema.timestamp))
-            .limit(limit)
-            .offset(offset);
+      const repository = this.telemetryService.getRepository();
+      
+      // Fetch telemetry data using repository
+      const telemetryData = await repository.findMany({
+        topic: query.topic,
+        limit,
+        offset,
+      });
 
       // Count total records
-      const totalResult = query.topic
-        ? await db.select({ count: count() })
-            .from(telemetrySchema)
-            .where(eq(telemetrySchema.topic, query.topic))
-        : await db.select({ count: count() })
-            .from(telemetrySchema);
-      const total = totalResult[0]?.count || 0;
+      const total = await repository.count(query.topic);
 
       return {
         data: telemetryData,
