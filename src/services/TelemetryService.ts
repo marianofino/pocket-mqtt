@@ -42,14 +42,6 @@ export class TelemetryService {
   }
 
   /**
-   * Legacy method for backwards compatibility.
-   * @deprecated Use getDb() instead.
-   */
-  getPrisma(): BetterSQLite3Database<typeof schema> {
-    return this.db;
-  }
-
-  /**
    * Add a message to the buffer.
    * If buffer reaches max size, flush immediately.
    */

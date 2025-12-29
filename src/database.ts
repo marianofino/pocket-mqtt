@@ -52,8 +52,3 @@ export async function disconnectDb(): Promise<void> {
     db = null;
   }
 }
-
-// Legacy aliases for backwards compatibility during migration
-export const getPrismaClient = getDbClient;
-export const resetPrismaClient = resetDbClient;
-export const disconnectPrisma = disconnectDb;
