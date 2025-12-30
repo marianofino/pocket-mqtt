@@ -83,13 +83,13 @@ export function getDbClient(): DbClient {
 /**
  * Reset the database client singleton (for testing).
  */
-export function resetDbClient(): void {
+export async function resetDbClient(): Promise<void> {
   if (sqlite) {
     sqlite.close();
     sqlite = null;
   }
   if (pgClient) {
-    pgClient.end({ timeout: 5 });
+    await pgClient.end({ timeout: 5 });
     pgClient = null;
   }
   db = null;
