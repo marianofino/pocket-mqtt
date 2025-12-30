@@ -113,7 +113,7 @@ export class APIServer {
         }
 
         // Attach tenant info to request for use in route handlers
-        (request as any).tenant = tenant;
+        request.tenant = tenant;
       } catch (err) {
         this.fastify.log.error({ err }, 'Error during tenant authentication');
         reply.code(401).send({ error: 'Unauthorized' });

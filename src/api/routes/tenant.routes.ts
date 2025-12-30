@@ -94,8 +94,8 @@ export async function tenantRoutes(
     }
 
     // Verify the authenticated tenant matches the requested tenantId
-    const authenticatedTenant = (request as any).tenant;
-    if (authenticatedTenant.id !== tenantId) {
+    const authenticatedTenant = request.tenant;
+    if (!authenticatedTenant || authenticatedTenant.id !== tenantId) {
       return reply.code(403).send({ error: 'Cannot create users for a different tenant' });
     }
 
