@@ -22,6 +22,14 @@ export class DeviceService {
   }
 
   /**
+   * Attach a logger after construction (useful when services are created
+   * before the Fastify instance is available).
+   */
+  setLogger(logger?: FastifyBaseLogger): void {
+    this.logger = logger;
+  }
+
+  /**
    * Create a new device with auto-generated token.
    * 
    * @param data Device data (name required, labels and notes optional)

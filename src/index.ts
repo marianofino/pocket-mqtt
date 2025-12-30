@@ -31,12 +31,12 @@ export class PocketMQTT {
     
     // Initialize core services
     this.telemetryService = new TelemetryService();
+    this.deviceService = new DeviceService();
     
-    // Initialize API server first to get logger
+    // Initialize API server with the concrete services
     this.apiServer = new APIServer(
       this.telemetryService,
-      // DeviceService will be initialized below with API logger
-      {} as DeviceService,
+      this.deviceService,
       {
         port: config.apiPort,
         host: config.apiHost,
@@ -44,16 +44,9 @@ export class PocketMQTT {
         maxPayloadSize
       }
     );
-    
-    // Initialize DeviceService with API logger
-    this.deviceService = new DeviceService(undefined, this.apiServer.getFastify().log);
-    
-    // Inject DeviceService into APIServer (workaround for circular dependency)
-    // This is safe because we haven't started the server yet
-    Object.defineProperty(this.apiServer, 'deviceService', {
-      value: this.deviceService,
-      writable: false
-    });
+
+    // Attach Fastify logger to the DeviceService now that Fastify exists
+    this.deviceService.setLogger(this.apiServer.getFastify().log);
     
     // Initialize MQTT server
     this.mqttServer = new MQTTServer(this.telemetryService, {
