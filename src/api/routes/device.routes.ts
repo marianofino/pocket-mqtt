@@ -275,7 +275,7 @@ export async function deviceRoutes(
     }
     
     try {
-      const device = await deviceService.updateDevice(id, { name, labels, notes });
+      const device = await deviceService.updateDevice(id, { name: name?.trim(), labels, notes });
       
       if (!device) {
         reply.code(404).send({ error: 'Device not found' });
