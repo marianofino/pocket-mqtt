@@ -26,5 +26,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
+      - name: Prepare SQLite schema
+        run: |
+          rm -f ./dev.db
+          npx drizzle-kit push --config drizzle.config.ts
+        env:
+          DATABASE_URL: file:./dev.db
+      
       - name: Run tests
         run: npm test
+        env:
+          DATABASE_URL: file:./dev.db
