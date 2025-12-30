@@ -30,7 +30,7 @@ export async function telemetryRoutes(
    * @returns Success message or error
    */
   fastify.post('/api/v1/telemetry', {
-    onRequest: [fastify.authenticate]
+    onRequest: [fastify.authenticateFlexible]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const body = request.body as { topic: string; payload: string } | undefined;
     const { topic, payload } = body ?? {};
@@ -68,7 +68,7 @@ export async function telemetryRoutes(
    * @returns Telemetry data with pagination metadata
    */
   fastify.get('/api/v1/telemetry', {
-    onRequest: [fastify.authenticate]
+    onRequest: [fastify.authenticateFlexible]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const query = request.query as { topic?: string; limit?: string; offset?: string };
     

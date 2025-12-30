@@ -280,7 +280,7 @@ describe('Tenant API Routes', () => {
       expect(response.status).toBe(401);
       const data = await response.json();
       expect(data).toHaveProperty('error');
-      expect(data.error).toContain('Authorization');
+      expect(data.error).toBe('Unauthorized');
     });
 
     it('should reject user creation with invalid API key', async () => {

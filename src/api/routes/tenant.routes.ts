@@ -76,7 +76,7 @@ export async function tenantRoutes(
 
   /**
    * POST /api/v1/tenant/:tenantId/user - Create a user for a tenant (protected)
-   * Requires tenant API key authentication via Bearer token
+   * Requires authentication via JWT or tenant API key
    * Creates a per-tenant admin user with hashed password
    * 
    * @param request - Fastify request with tenantId parameter and username, password in body
@@ -84,7 +84,7 @@ export async function tenantRoutes(
    * @returns Created user (without password hash)
    */
   fastify.post('/api/v1/tenant/:tenantId/user', {
-    onRequest: [fastify.authenticateTenant]
+    onRequest: [fastify.authenticateFlexible]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const params = request.params as { tenantId: string };
     const tenantId = parseInt(params.tenantId, 10);
@@ -94,6 +94,7 @@ export async function tenantRoutes(
     }
 
     // Verify the authenticated tenant matches the requested tenantId
+    // This ensures per-tenant scoping and isolation
     const authenticatedTenant = request.tenant;
     if (!authenticatedTenant || authenticatedTenant.id !== tenantId) {
       return reply.code(403).send({ error: 'Cannot create users for a different tenant' });

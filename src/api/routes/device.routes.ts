@@ -114,15 +114,16 @@ export async function deviceRoutes(
 
   /**
    * POST /api/devices - Create a new device (protected)
-   * Requires JWT authentication
+   * Requires JWT or tenant API key authentication
    * Auto-generates a unique token for the device
+   * Supports per-tenant scoping for isolation
    * 
    * @param request - Fastify request with name, labels (optional), notes (optional) in body
    * @param reply - Fastify reply object
    * @returns Created device with generated token
    */
   fastify.post('/api/devices', {
-    onRequest: [fastify.authenticate]
+    onRequest: [fastify.authenticateFlexible]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const body = request.body as { tenantId?: number; name?: string; labels?: string[]; notes?: string } | undefined;
     const { tenantId, name, labels, notes } = body ?? {};
@@ -131,6 +132,14 @@ export async function deviceRoutes(
     if (tenantId === undefined || typeof tenantId !== 'number' || tenantId < 1) {
       reply.code(400).send({ error: 'tenantId is required and must be a positive integer' });
       return;
+    }
+
+    // Per-tenant scoping: if authenticated via API key, ensure tenantId matches
+    if (request.tenant && request.tenant.id !== tenantId) {
+      return reply.code(403).send({ 
+        error: 'Cannot create devices for a different tenant',
+        message: 'Tenant ID in request does not match authenticated tenant'
+      });
     }
     
     // Validate name (required)
@@ -189,7 +198,7 @@ export async function deviceRoutes(
    * @returns List of devices with pagination metadata
    */
   fastify.get('/api/devices', {
-    onRequest: [fastify.authenticate]
+    onRequest: [fastify.authenticateFlexible]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const query = request.query as { limit?: string; offset?: string };
     
@@ -249,7 +258,7 @@ export async function deviceRoutes(
    * @returns Device details
    */
   fastify.get('/api/devices/:id', {
-    onRequest: [fastify.authenticate]
+    onRequest: [fastify.authenticateFlexible]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const params = request.params as { id: string };
     const id = parseInt(params.id, 10);
@@ -291,7 +300,7 @@ export async function deviceRoutes(
    * @returns Updated device with new token
    */
   fastify.post('/api/devices/:id/regenerate-token', {
-    onRequest: [fastify.authenticate]
+    onRequest: [fastify.authenticateFlexible]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const params = request.params as { id: string };
     const id = parseInt(params.id, 10);
@@ -337,7 +346,7 @@ export async function deviceRoutes(
    * @returns Updated device
    */
   fastify.patch('/api/devices/:id', {
-    onRequest: [fastify.authenticate]
+    onRequest: [fastify.authenticateFlexible]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const params = request.params as { id: string };
     const id = parseInt(params.id, 10);
@@ -415,7 +424,7 @@ export async function deviceRoutes(
    * @returns Success message
    */
   fastify.delete('/api/devices/:id', {
-    onRequest: [fastify.authenticate]
+    onRequest: [fastify.authenticateFlexible]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const params = request.params as { id: string };
     const id = parseInt(params.id, 10);

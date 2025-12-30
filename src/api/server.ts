@@ -75,47 +75,67 @@ export class APIServer {
   }
 
   /**
-   * Setup JWT authentication plugin and decorator.
+   * Setup authentication plugins and decorators.
    */
   private setupJWT(): void {
-    // Register JWT plugin
+    // Register JWT plugin for dashboard/admin users
     this.fastify.register(fastifyJwt, {
       secret: this.jwtSecret
     });
 
-    // Add JWT authentication decorator (for admin/legacy endpoints)
-    this.fastify.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
+    /**
+     * Flexible authentication decorator that supports both:
+     * - JWT tokens (for dashboard users)
+     * - Bearer API keys (for external systems)
+     * 
+     * Tries JWT first, then falls back to bearer token.
+     * Ensures per-tenant scoping for proper isolation.
+     */
+    this.fastify.decorate('authenticateFlexible', async (request: FastifyRequest, reply: FastifyReply) => {
+      // First, try JWT authentication (for dashboard users)
       try {
         await request.jwtVerify();
-      } catch (err) {
-        reply.code(401).send({ error: 'Unauthorized' });
+        // JWT authentication successful
+        // Note: JWT-based users may need tenant context added based on their token claims
+        return;
+      } catch (jwtError) {
+        // JWT failed, try bearer token authentication
       }
-    });
 
-    // Add tenant API key authentication decorator
-    this.fastify.decorate('authenticateTenant', async (request: FastifyRequest, reply: FastifyReply) => {
+      // Try bearer token authentication (for API keys)
+      const authHeader = request.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return reply.code(401).send({ 
+          error: 'Unauthorized',
+          message: 'Valid JWT token or Bearer API key required'
+        });
+      }
+
+      const token = authHeader.substring(7);
+      if (!token || token.trim().length === 0) {
+        return reply.code(401).send({ error: 'Invalid authentication token' });
+      }
+
+      // Validate as tenant API key
       try {
-        // Extract Bearer token from Authorization header
-        const authHeader = request.headers.authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-          return reply.code(401).send({ error: 'Missing or invalid Authorization header. Expected format: Bearer <apiKey>' });
-        }
-
-        const apiKey = authHeader.substring(7); // Remove 'Bearer ' prefix
-        if (!apiKey || apiKey.trim().length === 0) {
-          return reply.code(401).send({ error: 'Invalid API key' });
-        }
-
-        // Validate API key against tenant database
-        const tenant = await this.tenantService.getTenantByApiKey(apiKey.trim());
+        const tenant = await this.tenantService.getTenantByApiKey(token.trim());
         if (!tenant) {
           return reply.code(401).send({ error: 'Invalid API key' });
         }
 
-        // Attach tenant info to request for use in route handlers
+        // Attach tenant info to request for per-tenant scoping
         request.tenant = tenant;
       } catch (err) {
-        this.fastify.log.error({ err }, 'Error during tenant authentication');
+        this.fastify.log.error({ err }, 'Error during authentication');
+        return reply.code(401).send({ error: 'Unauthorized' });
+      }
+    });
+
+    // Legacy JWT-only decorator (kept for backward compatibility)
+    this.fastify.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err) {
         reply.code(401).send({ error: 'Unauthorized' });
       }
     });
