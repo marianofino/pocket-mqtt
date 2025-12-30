@@ -15,6 +15,7 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import type * as schemaSqlite from './db/schema.js';
 import type * as schemaPg from './db/schema.pg.js';
+import { registerRoutes } from './api/routes/index.js';
 
 type SqliteDbClient = BetterSQLite3Database<typeof schemaSqlite>;
 type PostgresDbClient = PostgresJsDatabase<typeof schemaPg>;
@@ -195,116 +196,10 @@ export class PocketMQTT {
   }
 
   private setupRoutes(): void {
-    // Health check endpoint - public (no authentication)
-    this.fastify.get('/health', async () => {
-      return { status: 'ok' };
-    });
-
-    // Login endpoint - public (generates JWT tokens)
-    this.fastify.post('/api/v1/auth/login', async (request, reply): Promise<{ token: string } | void> => {
-      const body = request.body as { username: string; password: string } | undefined;
-      const { username, password } = body ?? {};
-      
-      // Validate input
-      if (!username || typeof username !== 'string' || username.trim().length === 0) {
-        return reply.code(400).send({ error: 'Username is required and must be a non-empty string' });
-      }
-      
-      if (!password || typeof password !== 'string' || password.trim().length === 0) {
-        return reply.code(400).send({ error: 'Password is required and must be a non-empty string' });
-      }
-      
-      // Demo authentication - In production, use proper user management with hashed passwords
-      // Configure via environment variables: ADMIN_USERNAME and ADMIN_PASSWORD
-      const adminUsername = process.env.ADMIN_USERNAME || 'admin';
-      const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
-      
-      if (username === adminUsername && password === adminPassword) {
-        const token = this.fastify.jwt.sign({ username }, { expiresIn: '1h' });
-        return { token };
-      }
-      
-      return reply.code(401).send({ error: 'Invalid credentials' });
-    });
-
-    // POST /api/v1/telemetry - Submit telemetry data (protected)
-    this.fastify.post('/api/v1/telemetry', {
-      onRequest: [this.fastify.authenticate]
-    }, async (request, reply) => {
-      const body = request.body as { topic: string; payload: string } | undefined;
-      const { topic, payload } = body ?? {};
-      
-      // Stricter validation for empty strings
-      if (
-        typeof topic !== 'string' ||
-        topic.trim().length === 0 ||
-        typeof payload !== 'string' ||
-        payload.trim().length === 0
-      ) {
-        reply.code(400).send({ error: 'topic and payload must be non-empty strings' });
-        return;
-      }
-
-      // Validate payload size to prevent memory exhaustion
-      const payloadSize = Buffer.byteLength(payload, 'utf8');
-      if (payloadSize > this.maxPayloadSize) {
-        reply.code(400).send({ error: `payload size ${payloadSize} exceeds maximum ${this.maxPayloadSize} bytes` });
-        return;
-      }
-
-      await this.telemetryService.addMessage(topic, payload);
-      
-      return { success: true, message: 'Telemetry data buffered' };
-    });
-
-    // GET /api/v1/telemetry - Retrieve telemetry data (protected)
-    this.fastify.get('/api/v1/telemetry', {
-      onRequest: [this.fastify.authenticate]
-    }, async (request, reply) => {
-      const query = request.query as { topic?: string; limit?: string; offset?: string };
-      
-      const MAX_LIMIT = 1000;
-      
-      let limit = 100;
-      if (query.limit !== undefined) {
-        const parsedLimit = parseInt(query.limit, 10);
-        if (Number.isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > MAX_LIMIT) {
-          reply.code(400).send({ error: `limit must be an integer between 1 and ${MAX_LIMIT}` });
-          return;
-        }
-        limit = parsedLimit;
-      }
-
-      let offset = 0;
-      if (query.offset !== undefined) {
-        const parsedOffset = parseInt(query.offset, 10);
-        if (Number.isNaN(parsedOffset) || parsedOffset < 0) {
-          reply.code(400).send({ error: 'offset must be a non-negative integer' });
-          return;
-        }
-        offset = parsedOffset;
-      }
-      
-      const repository = this.telemetryService.getRepository();
-      
-      // Fetch telemetry data using repository
-      const telemetryData = await repository.findMany({
-        topic: query.topic,
-        limit,
-        offset,
-      });
-
-      // Count total records
-      const total = await repository.count(query.topic);
-
-      return {
-        data: telemetryData,
-        pagination: {
-          total,
-          limit,
-          offset,
-        },
-      };
+    // Register all routes using the modular plugin system
+    this.fastify.register(registerRoutes, {
+      telemetryService: this.telemetryService,
+      maxPayloadSize: this.maxPayloadSize
     });
   }
 
