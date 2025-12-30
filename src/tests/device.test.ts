@@ -1,12 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { PocketMQTT } from '../index.js';
 import { getDbClient } from '../core/database.js';
-import { deviceToken as deviceTokenSchema } from '../core/db/schema.js';
+import { deviceToken as deviceTokenSchema, tenant as tenantSchema } from '../core/db/schema.js';
+import { hashTenantName } from '../core/utils/tenant-utils.js';
 
 describe('Device API Routes', () => {
   let app: PocketMQTT;
   let db: ReturnType<typeof getDbClient>;
   let jwtToken: string;
+  let defaultTenantId: number;
   const MQTT_PORT = 1891;
   const API_PORT = 3011;
   const API_HOST = '127.0.0.1';
@@ -16,6 +18,7 @@ describe('Device API Routes', () => {
     
     // Clean up any existing data
     await db.delete(deviceTokenSchema);
+    await db.delete(tenantSchema);
     
     // Initialize PocketMQTT
     app = new PocketMQTT({
@@ -24,6 +27,20 @@ describe('Device API Routes', () => {
       apiHost: API_HOST
     });
     await app.start();
+
+    // Create a default tenant for device tests
+    const tenantName = 'default-tenant';
+    const token = hashTenantName(tenantName);
+    const tenantResponse = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/tenant`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: tenantName,
+        token
+      })
+    });
+    const tenantData = await tenantResponse.json();
+    defaultTenantId = tenantData.id;
 
     // Get JWT token for authenticated requests
     const loginResponse = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/auth/login`, {
@@ -46,6 +63,7 @@ describe('Device API Routes', () => {
 
   afterAll(async () => {
     await db.delete(deviceTokenSchema);
+    await db.delete(tenantSchema);
     await app.stop();
   }, 15000);
 
@@ -53,6 +71,7 @@ describe('Device API Routes', () => {
     it('should create a new device with auto-generated token', async () => {
       // Given: Device data
       const deviceData = {
+        tenantId: defaultTenantId,
         name: 'Temperature Sensor 1',
         labels: ['sensor', 'temperature', 'zone-1'],
         notes: 'Located in the main warehouse'
@@ -87,6 +106,7 @@ describe('Device API Routes', () => {
     it('should create a device with only required fields (name)', async () => {
       // Given: Minimal device data
       const deviceData = {
+        tenantId: defaultTenantId,
         name: 'Simple Device'
       };
 
@@ -111,8 +131,9 @@ describe('Device API Routes', () => {
     });
 
     it('should reject creation without name', async () => {
-      // Given: Device data without name
+      // Given: Device data without name (but with tenantId)
       const deviceData = {
+        tenantId: defaultTenantId,
         labels: ['test']
       };
 
@@ -135,6 +156,7 @@ describe('Device API Routes', () => {
     it('should reject creation with whitespace-only name', async () => {
       // Given: Device data with whitespace-only name
       const deviceData = {
+        tenantId: defaultTenantId,
         name: '   ',
         labels: ['test']
       };
@@ -158,9 +180,10 @@ describe('Device API Routes', () => {
     it('should reject creation with invalid labels (not an array)', async () => {
       // Given: Device data with invalid labels
       const deviceData = {
+        tenantId: defaultTenantId,
         name: 'Test Device',
         labels: 'not-an-array'
-      };
+      } as any;
 
       // When: Creating a device
       const response = await fetch(`http://${API_HOST}:${API_PORT}/api/devices`, {
@@ -180,7 +203,7 @@ describe('Device API Routes', () => {
 
     it('should require authentication', async () => {
       // Given: Device data
-      const deviceData = { name: 'Test' };
+      const deviceData = { tenantId: defaultTenantId, name: 'Test' };
 
       // When: Creating without token
       const response = await fetch(`http://${API_HOST}:${API_PORT}/api/devices`, {
@@ -203,7 +226,7 @@ describe('Device API Routes', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${jwtToken}`
         },
-        body: JSON.stringify({ name: 'Device 1', labels: ['test'] })
+        body: JSON.stringify({ tenantId: defaultTenantId, name: 'Device 1', labels: ['test'] })
       });
 
       await fetch(`http://${API_HOST}:${API_PORT}/api/devices`, {
@@ -212,7 +235,7 @@ describe('Device API Routes', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${jwtToken}`
         },
-        body: JSON.stringify({ name: 'Device 2' })
+        body: JSON.stringify({ tenantId: defaultTenantId, name: 'Device 2' })
       });
 
       // When: Listing devices
@@ -240,7 +263,7 @@ describe('Device API Routes', () => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${jwtToken}`
           },
-          body: JSON.stringify({ name: `Device ${i}` })
+          body: JSON.stringify({ tenantId: defaultTenantId, name: `Device ${i}` })
         });
       }
 
@@ -281,7 +304,7 @@ describe('Device API Routes', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${jwtToken}`
         },
-        body: JSON.stringify({ name: 'Test Device', labels: ['test'] })
+        body: JSON.stringify({ tenantId: defaultTenantId, name: 'Test Device', labels: ['test'] })
       });
       const createData = await createResponse.json();
       const deviceId = createData.device.id;
@@ -324,7 +347,7 @@ describe('Device API Routes', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${jwtToken}`
         },
-        body: JSON.stringify({ name: 'Test Device' })
+        body: JSON.stringify({ tenantId: defaultTenantId, name: 'Test Device' })
       });
       const createData = await createResponse.json();
       const deviceId = createData.device.id;
@@ -372,7 +395,7 @@ describe('Device API Routes', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${jwtToken}`
         },
-        body: JSON.stringify({ name: 'Original Name' })
+        body: JSON.stringify({ tenantId: defaultTenantId, name: 'Original Name' })
       });
       const createData = await createResponse.json();
       const deviceId = createData.device.id;
@@ -409,7 +432,7 @@ describe('Device API Routes', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${jwtToken}`
         },
-        body: JSON.stringify({ name: 'Original', labels: ['test'] })
+        body: JSON.stringify({ tenantId: defaultTenantId, name: 'Original', labels: ['test'] })
       });
       const createData = await createResponse.json();
       const deviceId = createData.device.id;
@@ -421,7 +444,7 @@ describe('Device API Routes', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${jwtToken}`
         },
-        body: JSON.stringify({ name: 'Only Name Changed' })
+        body: JSON.stringify({ tenantId: defaultTenantId, name: 'Only Name Changed' })
       });
 
       // Then: Should update only name
@@ -439,7 +462,7 @@ describe('Device API Routes', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${jwtToken}`
         },
-        body: JSON.stringify({ name: 'Test' })
+        body: JSON.stringify({ tenantId: defaultTenantId, name: 'Test' })
       });
 
       expect(response.status).toBe(404);
@@ -464,7 +487,7 @@ describe('Device API Routes', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${jwtToken}`
         },
-        body: JSON.stringify({ name: 'To Be Deleted' })
+        body: JSON.stringify({ tenantId: defaultTenantId, name: 'To Be Deleted' })
       });
       const createData = await createResponse.json();
       const deviceId = createData.device.id;
