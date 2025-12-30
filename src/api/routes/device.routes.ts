@@ -124,8 +124,14 @@ export async function deviceRoutes(
   fastify.post('/api/devices', {
     onRequest: [fastify.authenticate]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const body = request.body as { name?: string; labels?: string[]; notes?: string } | undefined;
-    const { name, labels, notes } = body ?? {};
+    const body = request.body as { tenantId?: number; name?: string; labels?: string[]; notes?: string } | undefined;
+    const { tenantId, name, labels, notes } = body ?? {};
+    
+    // Validate tenantId (required)
+    if (tenantId === undefined || typeof tenantId !== 'number' || tenantId < 1) {
+      reply.code(400).send({ error: 'tenantId is required and must be a positive integer' });
+      return;
+    }
     
     // Validate name (required)
     const nameValidation = validateName(name, true);
@@ -150,6 +156,7 @@ export async function deviceRoutes(
 
     try {
       const device = await deviceService.createDevice({
+        tenantId,
         name: name!.trim(),
         labels,
         notes

@@ -3,6 +3,7 @@
  */
 export interface Device {
   id: number;
+  tenantId: number;
   deviceId: string;
   token: string;
   name: string;
@@ -16,6 +17,7 @@ export interface Device {
  * New device to insert.
  */
 export interface NewDevice {
+  tenantId: number;
   deviceId: string;
   token: string;
   name: string;

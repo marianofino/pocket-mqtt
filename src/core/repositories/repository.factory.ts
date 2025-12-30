@@ -1,9 +1,15 @@
 import type { MessageRepository } from './MessageRepository.interface.js';
 import type { DeviceRepository } from './DeviceRepository.interface.js';
+import type { TenantRepository } from './TenantRepository.interface.js';
+import type { UserRepository } from './UserRepository.interface.js';
 import { SQLiteMessageRepository } from './SQLiteMessageRepository.js';
 import { PostgresMessageRepository } from './PostgresMessageRepository.js';
 import { SQLiteDeviceRepository } from './SQLiteDeviceRepository.js';
 import { PostgresDeviceRepository } from './PostgresDeviceRepository.js';
+import { SQLiteTenantRepository } from './SQLiteTenantRepository.js';
+import { PostgresTenantRepository } from './PostgresTenantRepository.js';
+import { SQLiteUserRepository } from './SQLiteUserRepository.js';
+import { PostgresUserRepository } from './PostgresUserRepository.js';
 import { getDbClient, getDbAdapter } from '../database.js';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -46,4 +52,42 @@ export function createDeviceRepository(): DeviceRepository {
   }
   
   return new SQLiteDeviceRepository(db as BetterSQLite3Database<typeof schemaSqlite>);
+}
+
+/**
+ * Factory function to create the appropriate TenantRepository implementation
+ * based on the current database adapter.
+ * 
+ * This follows the Repository Pattern as per ARCHITECTURE.md:
+ * - Abstract database calls for different storage engines
+ * - Allow dynamic selection of SQLite or PostgreSQL
+ */
+export function createTenantRepository(): TenantRepository {
+  const adapter = getDbAdapter();
+  const db = getDbClient();
+  
+  if (adapter === 'postgres') {
+    return new PostgresTenantRepository(db as PostgresJsDatabase<any>);
+  }
+  
+  return new SQLiteTenantRepository(db as BetterSQLite3Database<any>);
+}
+
+/**
+ * Factory function to create the appropriate UserRepository implementation
+ * based on the current database adapter.
+ * 
+ * This follows the Repository Pattern as per ARCHITECTURE.md:
+ * - Abstract database calls for different storage engines
+ * - Allow dynamic selection of SQLite or PostgreSQL
+ */
+export function createUserRepository(): UserRepository {
+  const adapter = getDbAdapter();
+  const db = getDbClient();
+  
+  if (adapter === 'postgres') {
+    return new PostgresUserRepository(db as PostgresJsDatabase<any>);
+  }
+  
+  return new SQLiteUserRepository(db as BetterSQLite3Database<any>);
 }

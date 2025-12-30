@@ -3,6 +3,8 @@ import fastifyJwt from '@fastify/jwt';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { TelemetryService } from '../core/services/TelemetryService.js';
 import type { DeviceService } from '../core/services/DeviceService.js';
+import type { TenantService } from '../core/services/TenantService.js';
+import type { UserService } from '../core/services/UserService.js';
 import { registerRoutes } from './routes/index.js';
 
 export interface APIServerConfig {
@@ -26,6 +28,8 @@ export class APIServer {
   constructor(
     private telemetryService: TelemetryService,
     private deviceService: DeviceService,
+    private tenantService: TenantService,
+    private userService: UserService,
     config: APIServerConfig = {}
   ) {
     this.port = config.port ?? 3000;
@@ -97,6 +101,8 @@ export class APIServer {
     this.fastify.register(registerRoutes, {
       telemetryService: this.telemetryService,
       deviceService: this.deviceService,
+      tenantService: this.tenantService,
+      userService: this.userService,
       maxPayloadSize: this.maxPayloadSize
     });
   }
