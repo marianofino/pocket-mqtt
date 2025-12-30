@@ -118,6 +118,10 @@ export class UserService {
    * Hash a password with a salt using SHA-256.
    * Format: salt$hash
    * 
+   * NOTE: This is a basic implementation for initial multi-tenant support.
+   * For production use, consider migrating to bcrypt, scrypt, or Argon2
+   * which provide better security against timing attacks and brute force.
+   * 
    * @param password Password to hash
    * @param salt Optional salt (generated if not provided)
    * @returns Hashed password with salt

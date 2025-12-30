@@ -1,5 +1,6 @@
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { eq } from 'drizzle-orm';
+import { count } from 'drizzle-orm';
 import { tenant } from '../db/schema.js';
 import type { TenantRepository, Tenant, NewTenant } from './TenantRepository.interface.js';
 
@@ -38,8 +39,8 @@ export class SQLiteTenantRepository implements TenantRepository {
   }
 
   async count(): Promise<number> {
-    const result = this.db.select({ count: tenant.id }).from(tenant).all();
-    return result.length;
+    const result = this.db.select({ value: count() }).from(tenant).get();
+    return result?.value ?? 0;
   }
 
   async delete(id: number): Promise<void> {

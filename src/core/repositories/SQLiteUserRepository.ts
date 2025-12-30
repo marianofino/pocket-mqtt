@@ -1,5 +1,6 @@
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { eq, and } from 'drizzle-orm';
+import { count } from 'drizzle-orm';
 import { user } from '../db/schema.js';
 import type { UserRepository, User, NewUser } from './UserRepository.interface.js';
 
@@ -44,11 +45,11 @@ export class SQLiteUserRepository implements UserRepository {
 
   async countByTenant(tenantId: number): Promise<number> {
     const result = this.db
-      .select({ count: user.id })
+      .select({ value: count() })
       .from(user)
       .where(eq(user.tenantId, tenantId))
-      .all();
-    return result.length;
+      .get();
+    return result?.value ?? 0;
   }
 
   async delete(id: number): Promise<void> {

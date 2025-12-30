@@ -2,9 +2,22 @@ import { createHash, randomBytes } from 'crypto';
 
 /**
  * Pepper value for tenant token validation.
- * In production, this should be loaded from a secure environment variable.
+ * MUST be set via environment variable in production.
+ * Falls back to a test-only value in development/testing environments.
  */
-const TENANT_TOKEN_PEPPER = process.env.TENANT_TOKEN_PEPPER || 'pocket-mqtt-default-pepper-change-in-production';
+const TENANT_TOKEN_PEPPER = process.env.TENANT_TOKEN_PEPPER || (
+  process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development'
+    ? 'test-only-pepper-INSECURE-do-not-use-in-production'
+    : undefined
+);
+
+if (!TENANT_TOKEN_PEPPER && process.env.NODE_ENV === 'production') {
+  throw new Error('TENANT_TOKEN_PEPPER environment variable must be set in production');
+}
+
+if (!TENANT_TOKEN_PEPPER) {
+  console.warn('WARNING: TENANT_TOKEN_PEPPER not set. Using insecure default for testing only!');
+}
 
 /**
  * Validate tenant token by hashing name + pepper.
@@ -27,7 +40,7 @@ export function validateTenantToken(name: string, token: string): boolean {
  */
 export function hashTenantName(name: string): string {
   return createHash('sha256')
-    .update(name + TENANT_TOKEN_PEPPER)
+    .update(name + (TENANT_TOKEN_PEPPER || ''))
     .digest('hex');
 }
 
