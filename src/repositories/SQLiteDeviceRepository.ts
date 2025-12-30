@@ -1,5 +1,5 @@
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { eq } from 'drizzle-orm';
+import { eq, count as drizzleCount } from 'drizzle-orm';
 import type * as schema from '../db/schema.js';
 import { deviceToken } from '../db/schema.js';
 import type { DeviceRepository, Device, NewDevice, UpdateDevice } from './DeviceRepository.interface.js';
@@ -64,9 +64,9 @@ export class SQLiteDeviceRepository implements DeviceRepository {
   }
 
   async count(): Promise<number> {
-    const result = await this.db.select({ count: deviceToken.id })
+    const result = await this.db.select({ count: drizzleCount() })
       .from(deviceToken);
-    return result.length;
+    return result[0]?.count || 0;
   }
 
   async deleteAll(): Promise<void> {

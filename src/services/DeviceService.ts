@@ -1,6 +1,7 @@
 import { createDeviceRepository } from '../repositories/repository.factory.js';
 import type { DeviceRepository, Device, NewDevice, UpdateDevice } from '../repositories/DeviceRepository.interface.js';
 import { generateDeviceToken } from '../utils/token-generator.js';
+import { randomBytes } from 'crypto';
 
 /**
  * Service for managing MQTT devices with auto-generated tokens.
@@ -28,8 +29,9 @@ export class DeviceService {
     labels?: string[];
     comentario?: string;
   }): Promise<Device> {
-    // Generate unique device ID and token
-    const deviceId = `device-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    // Generate unique device ID using crypto for security
+    const randomSuffix = randomBytes(4).toString('hex');
+    const deviceId = `device-${Date.now()}-${randomSuffix}`;
     const token = await this.generateUniqueToken();
 
     // Serialize labels to JSON if provided
