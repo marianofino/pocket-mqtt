@@ -51,7 +51,7 @@
   - `GET /api/devices` - Requires valid JWT
   - `GET /api/devices/:id` - Requires valid JWT
   - `POST /api/devices/:id/regenerate-token` - Requires valid JWT
-  - `PUT /api/devices/:id` - Requires valid JWT
+  - `PATCH /api/devices/:id` - Requires valid JWT
   - `DELETE /api/devices/:id` - Requires valid JWT
 - **Public Endpoints:**
   - `GET /health` - Health check (no auth)
