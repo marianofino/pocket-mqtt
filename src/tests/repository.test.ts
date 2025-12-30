@@ -8,7 +8,7 @@ describe('Repository Pattern', () => {
 
   beforeAll(async () => {
     // Ensure we start with a clean database
-    const db = getDbClient();
+    await getDbClient();
     const repo = createMessageRepository();
     await repo.deleteAll();
   });
