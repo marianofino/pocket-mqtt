@@ -5,9 +5,9 @@ export interface Device {
   id: number;
   deviceId: string;
   token: string;
-  nombre: string;
+  name: string;
   labels: string | null; // JSON string array
-  comentario: string | null;
+  notes: string | null;
   createdAt: Date;
   expiresAt: Date | null;
 }
@@ -18,9 +18,9 @@ export interface Device {
 export interface NewDevice {
   deviceId: string;
   token: string;
-  nombre: string;
+  name: string;
   labels?: string | null; // JSON string array
-  comentario?: string | null;
+  notes?: string | null;
   expiresAt?: Date | null;
 }
 
@@ -29,9 +29,9 @@ export interface NewDevice {
  */
 export interface UpdateDevice {
   token?: string;
-  nombre?: string;
+  name?: string;
   labels?: string | null;
-  comentario?: string | null;
+  notes?: string | null;
   expiresAt?: Date | null;
 }
 

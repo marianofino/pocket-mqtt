@@ -67,8 +67,8 @@
   - Collision-resistant even with hundreds of thousands of devices
   - Tokens can be regenerated/reset manually via API
 - **Device Metadata:**
-  - `nombre` (required): Human-readable device name for identification
+  - `name` (required): Human-readable device name for identification
   - `labels` (optional): Array of labels for filtering and queries
-  - `comentario` (optional): Free text field for comments or notes
+  - `notes` (optional): Free text field for comments or notes
 - **DeviceService:** Business logic layer handling device CRUD operations and token management
 - **Device API:** RESTful endpoints for device lifecycle management

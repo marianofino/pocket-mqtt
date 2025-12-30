@@ -26,9 +26,9 @@ curl -X POST http://localhost:3000/api/devices \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{
-    "nombre": "Temperature Sensor 1",
+    "name": "Temperature Sensor 1",
     "labels": ["sensor", "temperature", "zone-a"],
-    "comentario": "Located in warehouse zone A"
+    "notes": "Located in warehouse zone A"
   }'
 ```
 
@@ -40,9 +40,9 @@ Response:
     "id": 1,
     "deviceId": "device-1735534567890-abc123",
     "token": "a1b2-c3d4-e5f6",
-    "nombre": "Temperature Sensor 1",
+    "name": "Temperature Sensor 1",
     "labels": ["sensor", "temperature", "zone-a"],
-    "comentario": "Located in warehouse zone A",
+    "notes": "Located in warehouse zone A",
     "createdAt": "2024-12-30T03:00:00.000Z",
     "expiresAt": null
   }
@@ -101,13 +101,13 @@ This invalidates the old token and returns a new one.
 ## Update Device Metadata
 
 ```bash
-curl -X PUT http://localhost:3000/api/devices/1 \
+curl -X PATCH http://localhost:3000/api/devices/1 \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{
-    "nombre": "Temperature Sensor 1 - Updated",
+    "name": "Temperature Sensor 1 - Updated",
     "labels": ["sensor", "temperature", "zone-a", "critical"],
-    "comentario": "Moved to critical monitoring"
+    "notes": "Moved to critical monitoring"
   }'
 ```
 

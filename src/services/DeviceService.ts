@@ -9,7 +9,7 @@ import { randomBytes } from 'crypto';
  * Handles business logic for:
  * - Creating devices with unique tokens
  * - Regenerating device tokens
- * - Managing device metadata (nombre, labels, comentario)
+ * - Managing device metadata (name, labels, notes)
  */
 export class DeviceService {
   private repository: DeviceRepository;
@@ -21,13 +21,13 @@ export class DeviceService {
   /**
    * Create a new device with auto-generated token.
    * 
-   * @param data Device data (nombre required, labels and comentario optional)
+   * @param data Device data (name required, labels and notes optional)
    * @returns Promise with created device including generated token
    */
   async createDevice(data: {
-    nombre: string;
+    name: string;
     labels?: string[];
-    comentario?: string;
+    notes?: string;
   }): Promise<Device> {
     // Generate unique device ID using crypto for security
     const randomSuffix = randomBytes(4).toString('hex');
@@ -40,9 +40,9 @@ export class DeviceService {
     const newDevice: NewDevice = {
       deviceId,
       token,
-      nombre: data.nombre,
+      name: data.name,
       labels: labelsJson,
-      comentario: data.comentario ?? null,
+      notes: data.notes ?? null,
     };
 
     return await this.repository.create(newDevice);
@@ -103,27 +103,27 @@ export class DeviceService {
   }
 
   /**
-   * Update device metadata (nombre, labels, comentario).
+   * Update device metadata (name, labels, notes).
    * 
    * @param id Device ID
    * @param data Update data
    * @returns Promise with updated device or undefined if not found
    */
   async updateDevice(id: number, data: {
-    nombre?: string;
+    name?: string;
     labels?: string[];
-    comentario?: string;
+    notes?: string;
   }): Promise<Device | undefined> {
     const updateData: UpdateDevice = {};
     
-    if (data.nombre !== undefined) {
-      updateData.nombre = data.nombre;
+    if (data.name !== undefined) {
+      updateData.name = data.name;
     }
     if (data.labels !== undefined) {
       updateData.labels = JSON.stringify(data.labels);
     }
-    if (data.comentario !== undefined) {
-      updateData.comentario = data.comentario;
+    if (data.notes !== undefined) {
+      updateData.notes = data.notes;
     }
 
     return await this.repository.update(id, updateData);

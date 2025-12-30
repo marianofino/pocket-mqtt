@@ -24,22 +24,22 @@ export async function deviceRoutes(
    * Requires JWT authentication
    * Auto-generates a unique token for the device
    * 
-   * @param request - Fastify request with nombre, labels (optional), comentario (optional) in body
+   * @param request - Fastify request with name, labels (optional), notes (optional) in body
    * @param reply - Fastify reply object
    * @returns Created device with generated token
    */
   fastify.post('/api/devices', {
     onRequest: [fastify.authenticate]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const body = request.body as { nombre?: string; labels?: string[]; comentario?: string } | undefined;
-    const { nombre, labels, comentario } = body ?? {};
+    const body = request.body as { name?: string; labels?: string[]; notes?: string } | undefined;
+    const { name, labels, notes } = body ?? {};
     
-    // Validate nombre (required)
+    // Validate name (required)
     if (
-      typeof nombre !== 'string' ||
-      nombre.trim().length === 0
+      typeof name !== 'string' ||
+      name.trim().length === 0
     ) {
-      reply.code(400).send({ error: 'nombre is required and must be a non-empty string' });
+      reply.code(400).send({ error: 'name is required and must be a non-empty string' });
       return;
     }
 
@@ -49,17 +49,17 @@ export async function deviceRoutes(
       return;
     }
 
-    // Validate comentario (optional, must be string if provided)
-    if (comentario !== undefined && typeof comentario !== 'string') {
-      reply.code(400).send({ error: 'comentario must be a string' });
+    // Validate notes (optional, must be string if provided)
+    if (notes !== undefined && typeof notes !== 'string') {
+      reply.code(400).send({ error: 'notes must be a string' });
       return;
     }
 
     try {
       const device = await deviceService.createDevice({
-        nombre,
+        name,
         labels,
-        comentario
+        notes
       });
 
       // Parse labels back to array for response
@@ -228,15 +228,15 @@ export async function deviceRoutes(
   });
 
   /**
-   * PUT /api/devices/:id - Update device metadata (protected)
+   * PATCH /api/devices/:id - Update device metadata (protected)
    * Requires JWT authentication
-   * Updates nombre, labels, and/or comentario
+   * Updates name, labels, and/or notes
    * 
    * @param request - Fastify request with id parameter and update data in body
    * @param reply - Fastify reply object
    * @returns Updated device
    */
-  fastify.put('/api/devices/:id', {
+  fastify.patch('/api/devices/:id', {
     onRequest: [fastify.authenticate]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const params = request.params as { id: string };
@@ -247,18 +247,18 @@ export async function deviceRoutes(
       return;
     }
 
-    const body = request.body as { nombre?: string; labels?: string[]; comentario?: string } | undefined;
-    const { nombre, labels, comentario } = body ?? {};
+    const body = request.body as { name?: string; labels?: string[]; notes?: string } | undefined;
+    const { name, labels, notes } = body ?? {};
 
     // At least one field must be provided
-    if (nombre === undefined && labels === undefined && comentario === undefined) {
-      reply.code(400).send({ error: 'At least one field (nombre, labels, comentario) must be provided' });
+    if (name === undefined && labels === undefined && notes === undefined) {
+      reply.code(400).send({ error: 'At least one field (name, labels, notes) must be provided' });
       return;
     }
 
-    // Validate nombre if provided
-    if (nombre !== undefined && (typeof nombre !== 'string' || nombre.trim().length === 0)) {
-      reply.code(400).send({ error: 'nombre must be a non-empty string' });
+    // Validate name if provided
+    if (name !== undefined && (typeof name !== 'string' || name.trim().length === 0)) {
+      reply.code(400).send({ error: 'name must be a non-empty string' });
       return;
     }
 
@@ -268,14 +268,14 @@ export async function deviceRoutes(
       return;
     }
 
-    // Validate comentario if provided
-    if (comentario !== undefined && typeof comentario !== 'string') {
-      reply.code(400).send({ error: 'comentario must be a string' });
+    // Validate notes if provided
+    if (notes !== undefined && typeof notes !== 'string') {
+      reply.code(400).send({ error: 'notes must be a string' });
       return;
     }
     
     try {
-      const device = await deviceService.updateDevice(id, { nombre, labels, comentario });
+      const device = await deviceService.updateDevice(id, { name, labels, notes });
       
       if (!device) {
         reply.code(404).send({ error: 'Device not found' });

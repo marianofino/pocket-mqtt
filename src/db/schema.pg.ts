@@ -23,9 +23,9 @@ export const deviceToken = pgTable('DeviceToken', {
   id: serial('id').primaryKey(),
   deviceId: text('deviceId').notNull().unique(),
   token: text('token').notNull().unique(),
-  nombre: text('nombre').notNull(), // Device name for identification
+  name: text('name').notNull(), // Device name for identification
   labels: text('labels'), // JSON array of labels for filtering/queries (optional)
-  comentario: text('comentario'), // Free text field for comments/notes (optional)
+  notes: text('notes'), // Free text field for comments/notes (optional)
   createdAt: timestamp('createdAt', { mode: 'date' }).notNull().defaultNow(),
   expiresAt: timestamp('expiresAt', { mode: 'date' }),
 }, (table) => ({

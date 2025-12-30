@@ -24,7 +24,7 @@ describe('MQTT Telemetry Integration Tests', () => {
     await db.insert(deviceTokenSchema).values({
       deviceId: testDeviceId,
       token: testDeviceToken,
-      nombre: 'Test MQTT Device'
+      name: 'Test MQTT Device'
     });
     
     // Initialize PocketMQTT with both services

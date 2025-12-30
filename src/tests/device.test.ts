@@ -53,9 +53,9 @@ describe('Device API Routes', () => {
     it('should create a new device with auto-generated token', async () => {
       // Given: Device data
       const deviceData = {
-        nombre: 'Temperature Sensor 1',
+        name: 'Temperature Sensor 1',
         labels: ['sensor', 'temperature', 'zone-1'],
-        comentario: 'Located in the main warehouse'
+        notes: 'Located in the main warehouse'
       };
 
       // When: Creating a device
@@ -78,16 +78,16 @@ describe('Device API Routes', () => {
       expect(data.device.deviceId).toBeDefined();
       expect(data.device.token).toBeDefined();
       expect(data.device.token).toMatch(/^[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}$/);
-      expect(data.device.nombre).toBe(deviceData.nombre);
+      expect(data.device.name).toBe(deviceData.name);
       expect(data.device.labels).toEqual(deviceData.labels);
-      expect(data.device.comentario).toBe(deviceData.comentario);
+      expect(data.device.notes).toBe(deviceData.notes);
       expect(data.device.createdAt).toBeDefined();
     });
 
-    it('should create a device with only required fields (nombre)', async () => {
+    it('should create a device with only required fields (name)', async () => {
       // Given: Minimal device data
       const deviceData = {
-        nombre: 'Simple Device'
+        name: 'Simple Device'
       };
 
       // When: Creating a device
@@ -105,13 +105,13 @@ describe('Device API Routes', () => {
       const data = await response.json();
       
       expect(data.success).toBe(true);
-      expect(data.device.nombre).toBe(deviceData.nombre);
+      expect(data.device.name).toBe(deviceData.name);
       expect(data.device.labels).toBeNull();
-      expect(data.device.comentario).toBeNull();
+      expect(data.device.notes).toBeNull();
     });
 
-    it('should reject creation without nombre', async () => {
-      // Given: Device data without nombre
+    it('should reject creation without name', async () => {
+      // Given: Device data without name
       const deviceData = {
         labels: ['test']
       };
@@ -129,13 +129,13 @@ describe('Device API Routes', () => {
       // Then: Should return 400 error
       expect(response.status).toBe(400);
       const data = await response.json();
-      expect(data.error).toContain('nombre');
+      expect(data.error).toContain('name');
     });
 
     it('should reject creation with invalid labels (not an array)', async () => {
       // Given: Device data with invalid labels
       const deviceData = {
-        nombre: 'Test Device',
+        name: 'Test Device',
         labels: 'not-an-array'
       };
 
@@ -157,7 +157,7 @@ describe('Device API Routes', () => {
 
     it('should require authentication', async () => {
       // Given: Device data
-      const deviceData = { nombre: 'Test' };
+      const deviceData = { name: 'Test' };
 
       // When: Creating without token
       const response = await fetch(`http://${API_HOST}:${API_PORT}/api/devices`, {
@@ -180,7 +180,7 @@ describe('Device API Routes', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${jwtToken}`
         },
-        body: JSON.stringify({ nombre: 'Device 1', labels: ['test'] })
+        body: JSON.stringify({ name: 'Device 1', labels: ['test'] })
       });
 
       await fetch(`http://${API_HOST}:${API_PORT}/api/devices`, {
@@ -189,7 +189,7 @@ describe('Device API Routes', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${jwtToken}`
         },
-        body: JSON.stringify({ nombre: 'Device 2' })
+        body: JSON.stringify({ name: 'Device 2' })
       });
 
       // When: Listing devices
@@ -217,7 +217,7 @@ describe('Device API Routes', () => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${jwtToken}`
           },
-          body: JSON.stringify({ nombre: `Device ${i}` })
+          body: JSON.stringify({ name: `Device ${i}` })
         });
       }
 
@@ -258,7 +258,7 @@ describe('Device API Routes', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${jwtToken}`
         },
-        body: JSON.stringify({ nombre: 'Test Device', labels: ['test'] })
+        body: JSON.stringify({ name: 'Test Device', labels: ['test'] })
       });
       const createData = await createResponse.json();
       const deviceId = createData.device.id;
@@ -274,7 +274,7 @@ describe('Device API Routes', () => {
       
       expect(data.device).toBeDefined();
       expect(data.device.id).toBe(deviceId);
-      expect(data.device.nombre).toBe('Test Device');
+      expect(data.device.name).toBe('Test Device');
       expect(data.device.labels).toEqual(['test']);
     });
 
@@ -301,7 +301,7 @@ describe('Device API Routes', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${jwtToken}`
         },
-        body: JSON.stringify({ nombre: 'Test Device' })
+        body: JSON.stringify({ name: 'Test Device' })
       });
       const createData = await createResponse.json();
       const deviceId = createData.device.id;
@@ -340,7 +340,7 @@ describe('Device API Routes', () => {
     });
   });
 
-  describe('PUT /api/devices/:id - Update Device', () => {
+  describe('PATCH /api/devices/:id - Update Device', () => {
     it('should update device metadata', async () => {
       // Given: A created device
       const createResponse = await fetch(`http://${API_HOST}:${API_PORT}/api/devices`, {
@@ -349,22 +349,22 @@ describe('Device API Routes', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${jwtToken}`
         },
-        body: JSON.stringify({ nombre: 'Original Name' })
+        body: JSON.stringify({ name: 'Original Name' })
       });
       const createData = await createResponse.json();
       const deviceId = createData.device.id;
 
       // When: Updating the device
       const response = await fetch(`http://${API_HOST}:${API_PORT}/api/devices/${deviceId}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${jwtToken}`
         },
         body: JSON.stringify({
-          nombre: 'Updated Name',
+          name: 'Updated Name',
           labels: ['updated', 'test'],
-          comentario: 'Updated comment'
+          notes: 'Updated comment'
         })
       });
 
@@ -373,9 +373,9 @@ describe('Device API Routes', () => {
       const data = await response.json();
       
       expect(data.success).toBe(true);
-      expect(data.device.nombre).toBe('Updated Name');
+      expect(data.device.name).toBe('Updated Name');
       expect(data.device.labels).toEqual(['updated', 'test']);
-      expect(data.device.comentario).toBe('Updated comment');
+      expect(data.device.notes).toBe('Updated comment');
     });
 
     it('should allow partial updates', async () => {
@@ -386,37 +386,37 @@ describe('Device API Routes', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${jwtToken}`
         },
-        body: JSON.stringify({ nombre: 'Original', labels: ['test'] })
+        body: JSON.stringify({ name: 'Original', labels: ['test'] })
       });
       const createData = await createResponse.json();
       const deviceId = createData.device.id;
 
-      // When: Updating only nombre
+      // When: Updating only name
       const response = await fetch(`http://${API_HOST}:${API_PORT}/api/devices/${deviceId}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${jwtToken}`
         },
-        body: JSON.stringify({ nombre: 'Only Name Changed' })
+        body: JSON.stringify({ name: 'Only Name Changed' })
       });
 
-      // Then: Should update only nombre
+      // Then: Should update only name
       expect(response.ok).toBe(true);
       const data = await response.json();
       
-      expect(data.device.nombre).toBe('Only Name Changed');
+      expect(data.device.name).toBe('Only Name Changed');
       expect(data.device.labels).toEqual(['test']); // Should remain unchanged
     });
 
     it('should return 404 for non-existent device', async () => {
       const response = await fetch(`http://${API_HOST}:${API_PORT}/api/devices/99999`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${jwtToken}`
         },
-        body: JSON.stringify({ nombre: 'Test' })
+        body: JSON.stringify({ name: 'Test' })
       });
 
       expect(response.status).toBe(404);
@@ -424,9 +424,9 @@ describe('Device API Routes', () => {
 
     it('should require authentication', async () => {
       const response = await fetch(`http://${API_HOST}:${API_PORT}/api/devices/1`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: 'Test' })
+        body: JSON.stringify({ name: 'Test' })
       });
       expect(response.status).toBe(401);
     });
@@ -441,7 +441,7 @@ describe('Device API Routes', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${jwtToken}`
         },
-        body: JSON.stringify({ nombre: 'To Be Deleted' })
+        body: JSON.stringify({ name: 'To Be Deleted' })
       });
       const createData = await createResponse.json();
       const deviceId = createData.device.id;

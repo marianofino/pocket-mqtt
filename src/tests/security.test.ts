@@ -118,7 +118,7 @@ describe('MQTT Security - Device Token Authentication', () => {
     await db.insert(deviceTokenSchema).values({
       deviceId,
       token: validToken,
-      nombre: 'Test Sensor 001',
+      name: 'Test Sensor 001',
     });
 
     // When: An MQTT client connects with valid credentials
@@ -175,7 +175,7 @@ describe('MQTT Security - Device Token Authentication', () => {
     await db.insert(deviceTokenSchema).values({
       deviceId,
       token: expiredToken,
-      nombre: 'Test Sensor 002',
+      name: 'Test Sensor 002',
       expiresAt: new Date(Date.now() - 86400000) // Expired 1 day ago
     });
 

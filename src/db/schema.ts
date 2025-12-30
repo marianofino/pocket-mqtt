@@ -23,9 +23,9 @@ export const deviceToken = sqliteTable('DeviceToken', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   deviceId: text('deviceId').notNull().unique(),
   token: text('token').notNull().unique(),
-  nombre: text('nombre').notNull(), // Device name for identification
+  name: text('name').notNull(), // Device name for identification
   labels: text('labels'), // JSON array of labels for filtering/queries (optional)
-  comentario: text('comentario'), // Free text field for comments/notes (optional)
+  notes: text('notes'), // Free text field for comments/notes (optional)
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull().$defaultFn(() => new Date()),
   expiresAt: integer('expiresAt', { mode: 'timestamp' }),
 }, (table) => ({
