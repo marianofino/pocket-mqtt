@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { MqttPayloadSchema, MqttJsonPayloadSchema } from '../validation/mqtt-payload.schema.js';
+import { MqttPayloadSchema, MqttJsonPayloadSchema } from '../core/validation/mqtt-payload.schema.js';
 
 describe('MQTT Payload Validation', () => {
   describe('MqttPayloadSchema', () => {

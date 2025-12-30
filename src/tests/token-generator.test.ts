@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateDeviceToken } from '../utils/token-generator.js';
+import { generateDeviceToken } from '../core/utils/token-generator.js';
 
 describe('Token Generator', () => {
   describe('generateDeviceToken', () => {
