@@ -12,7 +12,8 @@ describe('build artifacts', () => {
   let dbModule: DbModule;
 
   const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-  const distDatabaseUrl = pathToFileURL(resolve(projectRoot, 'dist/database.js')).href;
+  // Database build artifact now lives under dist/core
+  const distDatabaseUrl = pathToFileURL(resolve(projectRoot, 'dist/core/database.js')).href;
 
   beforeAll(async () => {
     // Ensure the latest build artifacts exist before importing from dist
