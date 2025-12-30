@@ -1,7 +1,14 @@
 import { createMessageRepository } from '../repositories/repository.factory.js';
 import type { MessageRepository } from '../repositories/MessageRepository.interface.js';
 
+/**
+ * Default tenant ID for telemetry messages when tenant context is not available.
+ * This provides backward compatibility while transitioning to full multi-tenancy.
+ */
+const DEFAULT_TENANT_ID = 1;
+
 interface TelemetryMessage {
+  tenantId: number;
   topic: string;
   payload: string;
   timestamp: Date;
@@ -43,13 +50,18 @@ export class TelemetryService {
   /**
    * Add a message to the buffer.
    * If buffer reaches max size, flush immediately.
+   * 
+   * @param topic MQTT topic
+   * @param payload Message payload
+   * @param tenantId Optional tenant ID (defaults to DEFAULT_TENANT_ID)
    */
-  async addMessage(topic: string, payload: string): Promise<void> {
+  async addMessage(topic: string, payload: string, tenantId: number = DEFAULT_TENANT_ID): Promise<void> {
     if (!this.isRunning) {
       throw new Error('TelemetryService is stopped');
     }
 
     const message: TelemetryMessage = {
+      tenantId,
       topic,
       payload,
       timestamp: new Date(),
@@ -85,6 +97,7 @@ export class TelemetryService {
       // Batch insert all messages using repository
       await this.repository.insertBatch(
         messagesToFlush.map(msg => ({
+          tenantId: msg.tenantId,
           topic: msg.topic,
           payload: msg.payload,
           timestamp: msg.timestamp,

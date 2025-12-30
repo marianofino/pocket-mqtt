@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { TelemetryService } from '../core/services/TelemetryService.js';
 import { getDbClient, disconnectDb } from '../core/database.js';
-import { telemetry as telemetrySchema } from '../core/db/schema.js';
+import { telemetry as telemetrySchema, tenant as tenantSchema } from '../core/db/schema.js';
 import { count } from 'drizzle-orm';
 
 describe('TelemetryService', () => {
@@ -12,6 +12,13 @@ describe('TelemetryService', () => {
     // Start with a clean database
     db = getDbClient();
     await db.delete(telemetrySchema);
+    await db.delete(tenantSchema);
+    
+    // Create a default tenant (ID=1) for telemetry messages
+    await db.insert(tenantSchema).values({
+      name: 'default-tenant',
+      apiKey: 'default-api-key-for-testing',
+    });
   });
 
   beforeEach(async () => {
@@ -32,6 +39,8 @@ describe('TelemetryService', () => {
   });
 
   afterAll(async () => {
+    await db.delete(telemetrySchema);
+    await db.delete(tenantSchema);
     await disconnectDb();
   });
 

@@ -2,12 +2,13 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { connect } from 'mqtt';
 import { PocketMQTT } from '../index.js';
 import { getDbClient } from '../core/database.js';
-import { telemetry as telemetrySchema, deviceToken as deviceTokenSchema } from '../core/db/schema.js';
+import { telemetry as telemetrySchema, deviceToken as deviceTokenSchema, tenant as tenantSchema } from '../core/db/schema.js';
 import { count, asc, eq } from 'drizzle-orm';
 
 describe('MQTT Telemetry Integration Tests', () => {
   let app: PocketMQTT;
   let db: ReturnType<typeof getDbClient>;
+  let defaultTenantId: number;
   const MQTT_PORT = 1884;
   const API_PORT = 3001;
   const testDeviceId = 'test-device';
@@ -19,9 +20,18 @@ describe('MQTT Telemetry Integration Tests', () => {
     // Clean up any existing data
     await db.delete(deviceTokenSchema);
     await db.delete(telemetrySchema);
+    await db.delete(tenantSchema);
+    
+    // Create a default tenant
+    const tenantResult = await db.insert(tenantSchema).values({
+      name: 'default-tenant',
+      apiKey: 'default-api-key-for-testing',
+    }).returning();
+    defaultTenantId = tenantResult[0].id;
     
     // Create a test device token
     await db.insert(deviceTokenSchema).values({
+      tenantId: defaultTenantId,
       deviceId: testDeviceId,
       token: testDeviceToken,
       name: 'Test MQTT Device'
@@ -44,6 +54,7 @@ describe('MQTT Telemetry Integration Tests', () => {
     // Clean up data before stopping
     await db.delete(deviceTokenSchema);
     await db.delete(telemetrySchema);
+    await db.delete(tenantSchema);
     
     // Now stop the app (which will disconnect database)
     await app.stop();

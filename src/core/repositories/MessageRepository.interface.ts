@@ -3,6 +3,7 @@
  */
 export interface Telemetry {
   id: number;
+  tenantId: number;
   topic: string;
   payload: string;
   timestamp: Date;
@@ -12,6 +13,7 @@ export interface Telemetry {
  * New telemetry message to insert.
  */
 export interface NewTelemetry {
+  tenantId: number;
   topic: string;
   payload: string;
   timestamp: Date;

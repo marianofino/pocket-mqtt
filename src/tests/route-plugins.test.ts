@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { PocketMQTT } from '../index.js';
 import { getDbClient } from '../core/database.js';
-import { deviceToken as deviceTokenSchema } from '../core/db/schema.js';
+import { deviceToken as deviceTokenSchema, tenant as tenantSchema } from '../core/db/schema.js';
 
 describe('Route Plugin Integration', () => {
   let app: PocketMQTT;
@@ -15,9 +15,20 @@ describe('Route Plugin Integration', () => {
   beforeAll(async () => {
     db = getDbClient();
     
-    // Clean up and create test device token
+    // Clean up and create test data
     await db.delete(deviceTokenSchema);
+    await db.delete(tenantSchema);
+    
+    // Create a default tenant
+    const tenantResult = await db.insert(tenantSchema).values({
+      name: 'default-tenant',
+      apiKey: 'default-api-key-for-testing',
+    }).returning();
+    const defaultTenantId = tenantResult[0].id;
+    
+    // Create test device token
     await db.insert(deviceTokenSchema).values({
+      tenantId: defaultTenantId,
       deviceId: testDeviceId,
       token: testDeviceToken,
       name: 'Test Device for Routes'
@@ -34,6 +45,7 @@ describe('Route Plugin Integration', () => {
 
   afterAll(async () => {
     await db.delete(deviceTokenSchema);
+    await db.delete(tenantSchema);
     await app.stop();
   });
 
