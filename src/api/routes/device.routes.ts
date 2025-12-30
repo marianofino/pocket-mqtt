@@ -1,0 +1,341 @@
+import type { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
+import type { DeviceService } from '../../services/DeviceService.js';
+
+/**
+ * Options for device routes plugin
+ */
+export interface DeviceRoutesOptions extends FastifyPluginOptions {
+  deviceService: DeviceService;
+}
+
+/**
+ * Device route plugin
+ * Provides endpoints for managing MQTT devices with auto-generated tokens
+ * Requires JWT authentication for all endpoints
+ */
+export async function deviceRoutes(
+  fastify: FastifyInstance,
+  opts: DeviceRoutesOptions
+): Promise<void> {
+  const { deviceService } = opts;
+
+  /**
+   * POST /api/devices - Create a new device (protected)
+   * Requires JWT authentication
+   * Auto-generates a unique token for the device
+   * 
+   * @param request - Fastify request with nombre, labels (optional), comentario (optional) in body
+   * @param reply - Fastify reply object
+   * @returns Created device with generated token
+   */
+  fastify.post('/api/devices', {
+    onRequest: [fastify.authenticate]
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const body = request.body as { nombre?: string; labels?: string[]; comentario?: string } | undefined;
+    const { nombre, labels, comentario } = body ?? {};
+    
+    // Validate nombre (required)
+    if (
+      typeof nombre !== 'string' ||
+      nombre.trim().length === 0
+    ) {
+      reply.code(400).send({ error: 'nombre is required and must be a non-empty string' });
+      return;
+    }
+
+    // Validate labels (optional, must be array of strings if provided)
+    if (labels !== undefined && (!Array.isArray(labels) || !labels.every(l => typeof l === 'string'))) {
+      reply.code(400).send({ error: 'labels must be an array of strings' });
+      return;
+    }
+
+    // Validate comentario (optional, must be string if provided)
+    if (comentario !== undefined && typeof comentario !== 'string') {
+      reply.code(400).send({ error: 'comentario must be a string' });
+      return;
+    }
+
+    try {
+      const device = await deviceService.createDevice({
+        nombre,
+        labels,
+        comentario
+      });
+
+      // Parse labels back to array for response
+      const responseDevice = {
+        ...device,
+        labels: device.labels ? JSON.parse(device.labels) : null
+      };
+
+      return reply.code(201).send({
+        success: true,
+        device: responseDevice
+      });
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      fastify.log.error({ err }, 'Error creating device');
+      return reply.code(500).send({ error: 'Failed to create device' });
+    }
+  });
+
+  /**
+   * GET /api/devices - List all devices (protected)
+   * Requires JWT authentication
+   * Supports pagination with limit and offset query parameters
+   * 
+   * @param request - Fastify request with optional query parameters (limit, offset)
+   * @param reply - Fastify reply object
+   * @returns List of devices with pagination metadata
+   */
+  fastify.get('/api/devices', {
+    onRequest: [fastify.authenticate]
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const query = request.query as { limit?: string; offset?: string };
+    
+    const MAX_LIMIT = 1000;
+    
+    let limit = 100;
+    if (query.limit !== undefined) {
+      const parsedLimit = parseInt(query.limit, 10);
+      if (Number.isNaN(parsedLimit) || parsedLimit < 1 || parsedLimit > MAX_LIMIT) {
+        reply.code(400).send({ error: `limit must be an integer between 1 and ${MAX_LIMIT}` });
+        return;
+      }
+      limit = parsedLimit;
+    }
+
+    let offset = 0;
+    if (query.offset !== undefined) {
+      const parsedOffset = parseInt(query.offset, 10);
+      if (Number.isNaN(parsedOffset) || parsedOffset < 0) {
+        reply.code(400).send({ error: 'offset must be a non-negative integer' });
+        return;
+      }
+      offset = parsedOffset;
+    }
+    
+    try {
+      const devices = await deviceService.listDevices({ limit, offset });
+      const total = await deviceService.countDevices();
+
+      // Parse labels back to arrays for response
+      const responseDevices = devices.map(device => ({
+        ...device,
+        labels: device.labels ? JSON.parse(device.labels) : null
+      }));
+
+      return {
+        data: responseDevices,
+        pagination: {
+          total,
+          limit,
+          offset
+        }
+      };
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      fastify.log.error({ err }, 'Error listing devices');
+      return reply.code(500).send({ error: 'Failed to list devices' });
+    }
+  });
+
+  /**
+   * GET /api/devices/:id - Get a specific device (protected)
+   * Requires JWT authentication
+   * 
+   * @param request - Fastify request with id parameter
+   * @param reply - Fastify reply object
+   * @returns Device details
+   */
+  fastify.get('/api/devices/:id', {
+    onRequest: [fastify.authenticate]
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const params = request.params as { id: string };
+    const id = parseInt(params.id, 10);
+    
+    if (Number.isNaN(id) || id < 1) {
+      reply.code(400).send({ error: 'id must be a positive integer' });
+      return;
+    }
+    
+    try {
+      const device = await deviceService.getDevice(id);
+      
+      if (!device) {
+        reply.code(404).send({ error: 'Device not found' });
+        return;
+      }
+
+      // Parse labels back to array for response
+      const responseDevice = {
+        ...device,
+        labels: device.labels ? JSON.parse(device.labels) : null
+      };
+
+      return { device: responseDevice };
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      fastify.log.error({ err }, 'Error getting device');
+      return reply.code(500).send({ error: 'Failed to get device' });
+    }
+  });
+
+  /**
+   * POST /api/devices/:id/regenerate-token - Regenerate device token (protected)
+   * Requires JWT authentication
+   * Invalidates old token and generates a new one
+   * 
+   * @param request - Fastify request with id parameter
+   * @param reply - Fastify reply object
+   * @returns Updated device with new token
+   */
+  fastify.post('/api/devices/:id/regenerate-token', {
+    onRequest: [fastify.authenticate]
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const params = request.params as { id: string };
+    const id = parseInt(params.id, 10);
+    
+    if (Number.isNaN(id) || id < 1) {
+      reply.code(400).send({ error: 'id must be a positive integer' });
+      return;
+    }
+    
+    try {
+      const device = await deviceService.regenerateToken(id);
+      
+      if (!device) {
+        reply.code(404).send({ error: 'Device not found' });
+        return;
+      }
+
+      // Parse labels back to array for response
+      const responseDevice = {
+        ...device,
+        labels: device.labels ? JSON.parse(device.labels) : null
+      };
+
+      return {
+        success: true,
+        device: responseDevice,
+        message: 'Token regenerated successfully'
+      };
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      fastify.log.error({ err }, 'Error regenerating token');
+      return reply.code(500).send({ error: 'Failed to regenerate token' });
+    }
+  });
+
+  /**
+   * PUT /api/devices/:id - Update device metadata (protected)
+   * Requires JWT authentication
+   * Updates nombre, labels, and/or comentario
+   * 
+   * @param request - Fastify request with id parameter and update data in body
+   * @param reply - Fastify reply object
+   * @returns Updated device
+   */
+  fastify.put('/api/devices/:id', {
+    onRequest: [fastify.authenticate]
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const params = request.params as { id: string };
+    const id = parseInt(params.id, 10);
+    
+    if (Number.isNaN(id) || id < 1) {
+      reply.code(400).send({ error: 'id must be a positive integer' });
+      return;
+    }
+
+    const body = request.body as { nombre?: string; labels?: string[]; comentario?: string } | undefined;
+    const { nombre, labels, comentario } = body ?? {};
+
+    // At least one field must be provided
+    if (nombre === undefined && labels === undefined && comentario === undefined) {
+      reply.code(400).send({ error: 'At least one field (nombre, labels, comentario) must be provided' });
+      return;
+    }
+
+    // Validate nombre if provided
+    if (nombre !== undefined && (typeof nombre !== 'string' || nombre.trim().length === 0)) {
+      reply.code(400).send({ error: 'nombre must be a non-empty string' });
+      return;
+    }
+
+    // Validate labels if provided
+    if (labels !== undefined && (!Array.isArray(labels) || !labels.every(l => typeof l === 'string'))) {
+      reply.code(400).send({ error: 'labels must be an array of strings' });
+      return;
+    }
+
+    // Validate comentario if provided
+    if (comentario !== undefined && typeof comentario !== 'string') {
+      reply.code(400).send({ error: 'comentario must be a string' });
+      return;
+    }
+    
+    try {
+      const device = await deviceService.updateDevice(id, { nombre, labels, comentario });
+      
+      if (!device) {
+        reply.code(404).send({ error: 'Device not found' });
+        return;
+      }
+
+      // Parse labels back to array for response
+      const responseDevice = {
+        ...device,
+        labels: device.labels ? JSON.parse(device.labels) : null
+      };
+
+      return {
+        success: true,
+        device: responseDevice
+      };
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      fastify.log.error({ err }, 'Error updating device');
+      return reply.code(500).send({ error: 'Failed to update device' });
+    }
+  });
+
+  /**
+   * DELETE /api/devices/:id - Delete a device (protected)
+   * Requires JWT authentication
+   * 
+   * @param request - Fastify request with id parameter
+   * @param reply - Fastify reply object
+   * @returns Success message
+   */
+  fastify.delete('/api/devices/:id', {
+    onRequest: [fastify.authenticate]
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const params = request.params as { id: string };
+    const id = parseInt(params.id, 10);
+    
+    if (Number.isNaN(id) || id < 1) {
+      reply.code(400).send({ error: 'id must be a positive integer' });
+      return;
+    }
+    
+    try {
+      // Check if device exists first
+      const device = await deviceService.getDevice(id);
+      if (!device) {
+        reply.code(404).send({ error: 'Device not found' });
+        return;
+      }
+
+      await deviceService.deleteDevice(id);
+      
+      return {
+        success: true,
+        message: 'Device deleted successfully'
+      };
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      fastify.log.error({ err }, 'Error deleting device');
+      return reply.code(500).send({ error: 'Failed to delete device' });
+    }
+  });
+}

@@ -1,0 +1,172 @@
+import { createDeviceRepository } from '../repositories/repository.factory.js';
+import type { DeviceRepository, Device, NewDevice, UpdateDevice } from '../repositories/DeviceRepository.interface.js';
+import { generateDeviceToken } from '../utils/token-generator.js';
+
+/**
+ * Service for managing MQTT devices with auto-generated tokens.
+ * 
+ * Handles business logic for:
+ * - Creating devices with unique tokens
+ * - Regenerating device tokens
+ * - Managing device metadata (nombre, labels, comentario)
+ */
+export class DeviceService {
+  private repository: DeviceRepository;
+
+  constructor(repository?: DeviceRepository) {
+    this.repository = repository ?? createDeviceRepository();
+  }
+
+  /**
+   * Create a new device with auto-generated token.
+   * 
+   * @param data Device data (nombre required, labels and comentario optional)
+   * @returns Promise with created device including generated token
+   */
+  async createDevice(data: {
+    nombre: string;
+    labels?: string[];
+    comentario?: string;
+  }): Promise<Device> {
+    // Generate unique device ID and token
+    const deviceId = `device-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    const token = await this.generateUniqueToken();
+
+    // Serialize labels to JSON if provided
+    const labelsJson = data.labels ? JSON.stringify(data.labels) : null;
+
+    const newDevice: NewDevice = {
+      deviceId,
+      token,
+      nombre: data.nombre,
+      labels: labelsJson,
+      comentario: data.comentario ?? null,
+    };
+
+    return await this.repository.create(newDevice);
+  }
+
+  /**
+   * Get a device by its ID.
+   * 
+   * @param id Device ID
+   * @returns Promise with device or undefined if not found
+   */
+  async getDevice(id: number): Promise<Device | undefined> {
+    return await this.repository.findById(id);
+  }
+
+  /**
+   * Get a device by its deviceId.
+   * 
+   * @param deviceId Unique device identifier
+   * @returns Promise with device or undefined if not found
+   */
+  async getDeviceByDeviceId(deviceId: string): Promise<Device | undefined> {
+    return await this.repository.findByDeviceId(deviceId);
+  }
+
+  /**
+   * List all devices with optional pagination.
+   * 
+   * @param options Pagination options
+   * @returns Promise with array of devices
+   */
+  async listDevices(options?: {
+    limit?: number;
+    offset?: number;
+  }): Promise<Device[]> {
+    return await this.repository.findMany(options);
+  }
+
+  /**
+   * Count total devices.
+   * 
+   * @returns Promise with total count
+   */
+  async countDevices(): Promise<number> {
+    return await this.repository.count();
+  }
+
+  /**
+   * Regenerate a device token.
+   * Invalidates the old token and generates a new one.
+   * 
+   * @param id Device ID
+   * @returns Promise with updated device or undefined if not found
+   */
+  async regenerateToken(id: number): Promise<Device | undefined> {
+    const newToken = await this.generateUniqueToken();
+    return await this.repository.update(id, { token: newToken });
+  }
+
+  /**
+   * Update device metadata (nombre, labels, comentario).
+   * 
+   * @param id Device ID
+   * @param data Update data
+   * @returns Promise with updated device or undefined if not found
+   */
+  async updateDevice(id: number, data: {
+    nombre?: string;
+    labels?: string[];
+    comentario?: string;
+  }): Promise<Device | undefined> {
+    const updateData: UpdateDevice = {};
+    
+    if (data.nombre !== undefined) {
+      updateData.nombre = data.nombre;
+    }
+    if (data.labels !== undefined) {
+      updateData.labels = JSON.stringify(data.labels);
+    }
+    if (data.comentario !== undefined) {
+      updateData.comentario = data.comentario;
+    }
+
+    return await this.repository.update(id, updateData);
+  }
+
+  /**
+   * Delete a device.
+   * 
+   * @param id Device ID
+   * @returns Promise that resolves when delete is complete
+   */
+  async deleteDevice(id: number): Promise<void> {
+    await this.repository.delete(id);
+  }
+
+  /**
+   * Generate a unique token by checking for collisions.
+   * In the extremely unlikely event of a collision, generates a new token.
+   * 
+   * @returns Promise with unique token
+   */
+  private async generateUniqueToken(): Promise<string> {
+    const maxAttempts = 10;
+    
+    for (let i = 0; i < maxAttempts; i++) {
+      const token = generateDeviceToken();
+      const existing = await this.repository.findByToken(token);
+      
+      if (!existing) {
+        return token;
+      }
+      
+      // Collision detected, try again
+      console.warn(`Token collision detected (attempt ${i + 1}/${maxAttempts}), generating new token`);
+    }
+    
+    throw new Error('Failed to generate unique token after maximum attempts');
+  }
+
+  /**
+   * Get the underlying repository (for testing or direct access).
+   * 
+   * @returns DeviceRepository instance
+   */
+  getRepository(): DeviceRepository {
+    return this.repository;
+  }
+}

@@ -19,7 +19,8 @@ describe('Route Plugin Integration', () => {
     await db.delete(deviceTokenSchema);
     await db.insert(deviceTokenSchema).values({
       deviceId: testDeviceId,
-      token: testDeviceToken
+      token: testDeviceToken,
+      nombre: 'Test Device for Routes'
     });
     
     // Initialize PocketMQTT
