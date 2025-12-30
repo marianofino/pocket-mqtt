@@ -17,11 +17,15 @@ export const telemetry = pgTable('Telemetry', {
 /**
  * DeviceToken table schema for PostgreSQL
  * Stores device authentication tokens for MQTT connections
+ * with additional metadata for device management
  */
 export const deviceToken = pgTable('DeviceToken', {
   id: serial('id').primaryKey(),
   deviceId: text('deviceId').notNull().unique(),
   token: text('token').notNull().unique(),
+  name: text('name').notNull(), // Device name for identification
+  labels: text('labels'), // JSON array of labels for filtering/queries (optional)
+  notes: text('notes'), // Free text field for comments/notes (optional)
   createdAt: timestamp('createdAt', { mode: 'date' }).notNull().defaultNow(),
   expiresAt: timestamp('expiresAt', { mode: 'date' }),
 }, (table) => ({

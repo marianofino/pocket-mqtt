@@ -1,14 +1,17 @@
 import type { FastifyInstance } from 'fastify';
 import type { TelemetryService } from '../../services/TelemetryService.js';
+import type { DeviceService } from '../../services/DeviceService.js';
 import { healthRoutes } from './health.routes.js';
 import { authRoutes } from './auth.routes.js';
 import { telemetryRoutes } from './telemetry.routes.js';
+import { deviceRoutes } from './device.routes.js';
 
 /**
  * Options for registering all routes
  */
 export interface RegisterRoutesOptions {
   telemetryService: TelemetryService;
+  deviceService: DeviceService;
   maxPayloadSize: number;
 }
 
@@ -33,5 +36,10 @@ export async function registerRoutes(
   await fastify.register(telemetryRoutes, {
     telemetryService: options.telemetryService,
     maxPayloadSize: options.maxPayloadSize
+  });
+
+  // Register device routes (protected)
+  await fastify.register(deviceRoutes, {
+    deviceService: options.deviceService
   });
 }

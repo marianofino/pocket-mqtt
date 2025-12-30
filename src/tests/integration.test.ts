@@ -18,7 +18,8 @@ describe('PocketMQTT Integration Tests', () => {
     await db.delete(deviceToken);
     await db.insert(deviceToken).values({
       deviceId: testDeviceId,
-      token: testDeviceToken
+      token: testDeviceToken,
+      name: 'Integration Test Device'
     });
     
     // Initialize PocketMQTT with both services

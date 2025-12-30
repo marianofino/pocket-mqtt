@@ -6,6 +6,7 @@ import fastifyJwt from '@fastify/jwt';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { Server as NetServer } from 'net';
 import { TelemetryService } from './services/TelemetryService.js';
+import { DeviceService } from './services/DeviceService.js';
 import { disconnectDb, getDbClient, getDbAdapter } from './database.js';
 import { deviceToken as deviceTokenSchema } from './db/schema.js';
 import { deviceToken as deviceTokenSchemaPg } from './db/schema.pg.js';
@@ -35,6 +36,7 @@ export class PocketMQTT {
   private mqttServer: NetServer | null = null;
   private fastify: FastifyInstance;
   private telemetryService: TelemetryService;
+  private deviceService: DeviceService;
   private readonly maxPayloadSize = 64 * 1024; // 64KB max payload size
   private jwtSecret: string;
 
@@ -52,22 +54,23 @@ export class PocketMQTT {
       this.jwtSecret = providedSecret;
     }
     
+    // Initialize Fastify API first so we can use its logger
+    this.fastify = Fastify({
+      logger: true
+    });
+    
     // Initialize Aedes MQTT broker
     this.aedes = new Aedes();
     
-    // Initialize Telemetry service
+    // Initialize services with logger
     this.telemetryService = new TelemetryService();
+    this.deviceService = new DeviceService(undefined, this.fastify.log);
     
     // Setup MQTT authentication hooks
     this.setupMQTTAuthentication();
     
     // Hook into MQTT publish events to buffer telemetry
     this.setupMQTTHandlers();
-    
-    // Initialize Fastify API
-    this.fastify = Fastify({
-      logger: true
-    });
     
     // Setup JWT authentication
     this.setupJWT();
@@ -199,6 +202,7 @@ export class PocketMQTT {
     // Register all routes using the modular plugin system
     this.fastify.register(registerRoutes, {
       telemetryService: this.telemetryService,
+      deviceService: this.deviceService,
       maxPayloadSize: this.maxPayloadSize
     });
   }
