@@ -42,12 +42,15 @@ export function getDbClient(): DbClient {
   
   // Clean up old client if adapter changed
   if (db && currentAdapter !== adapter) {
+    console.warn('Database adapter changed at runtime. This may cause connection leaks. Consider restarting the application.');
     if (sqlite) {
       sqlite.close();
       sqlite = null;
     }
     if (pgClient) {
-      pgClient.end({ timeout: 5 });
+      // Note: Cannot await in sync function. Connection cleanup happens on next event loop.
+      // This is an edge case - adapter shouldn't change at runtime in production.
+      void pgClient.end({ timeout: 5 });
       pgClient = null;
     }
     db = null;

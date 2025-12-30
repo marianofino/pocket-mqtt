@@ -11,6 +11,13 @@ import { deviceToken as deviceTokenSchema } from './db/schema.js';
 import { deviceToken as deviceTokenSchemaPg } from './db/schema.pg.js';
 import { eq } from 'drizzle-orm';
 import { MqttPayloadSchema } from './validation/mqtt-payload.schema.js';
+import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import type * as schemaSqlite from './db/schema.js';
+import type * as schemaPg from './db/schema.pg.js';
+
+type SqliteDbClient = BetterSQLite3Database<typeof schemaSqlite>;
+type PostgresDbClient = PostgresJsDatabase<typeof schemaPg>;
 
 export interface PocketMQTTConfig {
   mqttPort?: number;
@@ -83,21 +90,21 @@ export class PocketMQTT {
         
         // Look up device token in database based on adapter
         let deviceTokenRecord: { deviceId: string; token: string; expiresAt: Date | null } | undefined;
-        const dbClient = getDbClient();
         if (adapter === 'postgres') {
-          const db = dbClient as import('drizzle-orm/postgres-js').PostgresJsDatabase<typeof import('./db/schema.pg.js')>;
+          const db = getDbClient() as PostgresDbClient;
           const results = await db.select()
             .from(deviceTokenSchemaPg)
             .where(eq(deviceTokenSchemaPg.token, token))
             .limit(1);
           deviceTokenRecord = results[0];
         } else {
-          const db = dbClient as import('drizzle-orm/better-sqlite3').BetterSQLite3Database<typeof import('./db/schema.js')>;
+          const db = getDbClient() as SqliteDbClient;
           const results = await db.select()
             .from(deviceTokenSchema)
             .where(eq(deviceTokenSchema.token, token))
             .limit(1);
           deviceTokenRecord = results[0];
+        }
 
         if (!deviceTokenRecord) {
           callback(null, false);
