@@ -75,19 +75,28 @@ export async function tenantRoutes(
   });
 
   /**
-   * POST /api/v1/tenant/:tenantId/user - Create a user for a tenant (public for now)
+   * POST /api/v1/tenant/:tenantId/user - Create a user for a tenant (protected)
+   * Requires tenant API key authentication via Bearer token
    * Creates a per-tenant admin user with hashed password
    * 
    * @param request - Fastify request with tenantId parameter and username, password in body
    * @param reply - Fastify reply object
    * @returns Created user (without password hash)
    */
-  fastify.post('/api/v1/tenant/:tenantId/user', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.post('/api/v1/tenant/:tenantId/user', {
+    onRequest: [fastify.authenticateTenant]
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
     const params = request.params as { tenantId: string };
     const tenantId = parseInt(params.tenantId, 10);
     
     if (Number.isNaN(tenantId) || tenantId < 1) {
       return reply.code(400).send({ error: 'tenantId must be a positive integer' });
+    }
+
+    // Verify the authenticated tenant matches the requested tenantId
+    const authenticatedTenant = (request as any).tenant;
+    if (authenticatedTenant.id !== tenantId) {
+      return reply.code(403).send({ error: 'Cannot create users for a different tenant' });
     }
 
     const body = request.body as { username?: string; password?: string } | undefined;
@@ -104,12 +113,6 @@ export async function tenantRoutes(
     }
 
     try {
-      // Verify tenant exists
-      const tenant = await tenantService.getTenant(tenantId);
-      if (!tenant) {
-        return reply.code(404).send({ error: 'Tenant not found' });
-      }
-
       const user = await userService.createUser({
         tenantId,
         username: username.trim(),

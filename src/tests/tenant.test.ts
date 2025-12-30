@@ -222,6 +222,7 @@ describe('Tenant API Routes', () => {
 
   describe('POST /api/v1/tenant/:tenantId/user', () => {
     let tenantId: number;
+    let tenantApiKey: string;
 
     beforeEach(async () => {
       // Create a tenant for user tests
@@ -239,12 +240,16 @@ describe('Tenant API Routes', () => {
 
       const tenantData = await tenantResponse.json();
       tenantId = tenantData.id;
+      tenantApiKey = tenantData.apiKey;
     });
 
-    it('should create a user for a tenant', async () => {
+    it('should create a user for a tenant with valid API key', async () => {
       const response = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/tenant/${tenantId}/user`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tenantApiKey}`
+        },
         body: JSON.stringify({
           username: 'admin',
           password: 'securepassword123'
@@ -262,11 +267,82 @@ describe('Tenant API Routes', () => {
       expect(data.user).not.toHaveProperty('passwordHash'); // Should not expose password hash
     });
 
+    it('should reject user creation without Authorization header', async () => {
+      const response = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/tenant/${tenantId}/user`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'admin',
+          password: 'securepassword123'
+        })
+      });
+
+      expect(response.status).toBe(401);
+      const data = await response.json();
+      expect(data).toHaveProperty('error');
+      expect(data.error).toContain('Authorization');
+    });
+
+    it('should reject user creation with invalid API key', async () => {
+      const response = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/tenant/${tenantId}/user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer invalid-api-key-12345'
+        },
+        body: JSON.stringify({
+          username: 'admin',
+          password: 'securepassword123'
+        })
+      });
+
+      expect(response.status).toBe(401);
+      const data = await response.json();
+      expect(data).toHaveProperty('error', 'Invalid API key');
+    });
+
+    it('should reject creating users for a different tenant', async () => {
+      // Create another tenant
+      const otherTenantName = 'other-tenant';
+      const otherToken = hashTenantName(otherTenantName);
+      const otherTenantResponse = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/tenant`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: otherTenantName,
+          token: otherToken
+        })
+      });
+      const otherTenantData = await otherTenantResponse.json();
+      const otherTenantId = otherTenantData.id;
+
+      // Try to create a user for the other tenant using the first tenant's API key
+      const response = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/tenant/${otherTenantId}/user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tenantApiKey}` // Using first tenant's key
+        },
+        body: JSON.stringify({
+          username: 'admin',
+          password: 'securepassword123'
+        })
+      });
+
+      expect(response.status).toBe(403);
+      const data = await response.json();
+      expect(data).toHaveProperty('error');
+      expect(data.error).toContain('different tenant');
+    });
+
     it('should reject duplicate username for the same tenant', async () => {
       // Create first user
       const firstResponse = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/tenant/${tenantId}/user`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tenantApiKey}`
+        },
         body: JSON.stringify({
           username: 'admin',
           password: 'securepassword123'
@@ -277,7 +353,10 @@ describe('Tenant API Routes', () => {
       // Try to create duplicate
       const secondResponse = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/tenant/${tenantId}/user`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tenantApiKey}`
+        },
         body: JSON.stringify({
           username: 'admin',
           password: 'anotherpassword'
@@ -290,26 +369,13 @@ describe('Tenant API Routes', () => {
       expect(data.error).toContain('already exists');
     });
 
-    it('should reject user creation for non-existent tenant', async () => {
-      const invalidTenantId = 99999;
-      const response = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/tenant/${invalidTenantId}/user`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: 'admin',
-          password: 'securepassword123'
-        })
-      });
-
-      expect(response.status).toBe(404);
-      const data = await response.json();
-      expect(data).toHaveProperty('error', 'Tenant not found');
-    });
-
     it('should reject missing username', async () => {
       const response = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/tenant/${tenantId}/user`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tenantApiKey}`
+        },
         body: JSON.stringify({
           password: 'securepassword123'
         })
@@ -324,7 +390,10 @@ describe('Tenant API Routes', () => {
     it('should reject missing password', async () => {
       const response = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/tenant/${tenantId}/user`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tenantApiKey}`
+        },
         body: JSON.stringify({
           username: 'admin'
         })
@@ -339,7 +408,10 @@ describe('Tenant API Routes', () => {
     it('should reject password shorter than 8 characters', async () => {
       const response = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/tenant/${tenantId}/user`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tenantApiKey}`
+        },
         body: JSON.stringify({
           username: 'admin',
           password: 'short'
@@ -355,7 +427,10 @@ describe('Tenant API Routes', () => {
     it('should reject invalid tenantId format', async () => {
       const response = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/tenant/invalid/user`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tenantApiKey}`
+        },
         body: JSON.stringify({
           username: 'admin',
           password: 'securepassword123'
