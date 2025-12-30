@@ -45,8 +45,10 @@ export class PocketMQTT {
       }
     );
 
-    // Attach Fastify logger to the DeviceService now that Fastify exists
-    this.deviceService.setLogger(this.apiServer.getFastify().log);
+    // Attach Fastify logger to the DeviceService.
+    // Note: The logger is available immediately after Fastify construction,
+    // before plugins are registered. This is safe and intentional.
+    this.deviceService.setLogger(this.apiServer.getLogger());
     
     // Initialize MQTT server
     this.mqttServer = new MQTTServer(this.telemetryService, {
@@ -60,7 +62,7 @@ export class PocketMQTT {
    */
   async start(): Promise<void> {
     // Start MQTT broker
-    await this.mqttServer.start(this.apiServer.getFastify().log);
+    await this.mqttServer.start(this.apiServer.getLogger());
     
     // Start API server
     await this.apiServer.start();

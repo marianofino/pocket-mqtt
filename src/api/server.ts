@@ -55,9 +55,19 @@ export class APIServer {
 
   /**
    * Get the Fastify instance for direct access if needed.
+   * Note: Should only be used after the server is fully started.
    */
   getFastify(): FastifyInstance {
     return this.fastify;
+  }
+
+  /**
+   * Get the Fastify logger instance.
+   * Safe to call immediately after construction, as the logger is available
+   * as soon as the Fastify instance is created, before plugins are registered.
+   */
+  getLogger() {
+    return this.fastify.log;
   }
 
   /**

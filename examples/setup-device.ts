@@ -80,11 +80,7 @@ console.log('=== Device Token Setup ===\n');
 async function checkDatabaseSetup(context: DbContext): Promise<boolean> {
   try {
     // Try to query the DeviceToken table to check if migrations are applied
-    if (context.adapter === 'postgres') {
-      await context.db.select().from(context.deviceTable).limit(1);
-    } else {
-      await context.db.select().from(context.deviceTable).limit(1);
-    }
+    await context.db.select().from(context.deviceTable).limit(1);
     return true;
   } catch (error: unknown) {
     if (error instanceof Error && error.message.includes('no such table')) {
@@ -100,17 +96,11 @@ async function checkDatabaseSetup(context: DbContext): Promise<boolean> {
 }
 
 async function findDevice(context: DbContext, deviceId: string): Promise<DeviceTokenRow | undefined> {
-  const result = context.adapter === 'postgres'
-    ? await context.db
-        .select()
-        .from(context.deviceTable)
-        .where(eq(context.deviceTable.deviceId, deviceId))
-        .limit(1)
-    : await context.db
-        .select()
-        .from(context.deviceTable)
-        .where(eq(context.deviceTable.deviceId, deviceId))
-        .limit(1);
+  const result = await context.db
+    .select()
+    .from(context.deviceTable)
+    .where(eq(context.deviceTable.deviceId, deviceId))
+    .limit(1);
 
   return result[0];
 }
@@ -146,10 +136,6 @@ async function createDevice(
 }
 
 async function listDevices(context: DbContext): Promise<DeviceTokenRow[]> {
-  if (context.adapter === 'postgres') {
-    return context.db.select().from(context.deviceTable).orderBy(desc(context.deviceTable.createdAt));
-  }
-
   return context.db.select().from(context.deviceTable).orderBy(desc(context.deviceTable.createdAt));
 }
 
