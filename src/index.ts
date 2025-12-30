@@ -83,21 +83,21 @@ export class PocketMQTT {
         
         // Look up device token in database based on adapter
         let deviceTokenRecord: { deviceId: string; token: string; expiresAt: Date | null } | undefined;
+        const dbClient = getDbClient();
         if (adapter === 'postgres') {
-          const db = getDbClient() as import('drizzle-orm/postgres-js').PostgresJsDatabase<typeof import('./db/schema.pg.js')>;
+          const db = dbClient as import('drizzle-orm/postgres-js').PostgresJsDatabase<typeof import('./db/schema.pg.js')>;
           const results = await db.select()
             .from(deviceTokenSchemaPg)
             .where(eq(deviceTokenSchemaPg.token, token))
             .limit(1);
           deviceTokenRecord = results[0];
         } else {
-          const db = getDbClient() as import('drizzle-orm/better-sqlite3').BetterSQLite3Database<typeof import('./db/schema.js')>;
+          const db = dbClient as import('drizzle-orm/better-sqlite3').BetterSQLite3Database<typeof import('./db/schema.js')>;
           const results = await db.select()
             .from(deviceTokenSchema)
             .where(eq(deviceTokenSchema.token, token))
             .limit(1);
           deviceTokenRecord = results[0];
-        }
 
         if (!deviceTokenRecord) {
           callback(null, false);
