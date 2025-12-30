@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { createMessageRepository } from '../repositories/repository.factory.js';
 import type { MessageRepository } from '../repositories/MessageRepository.interface.js';
-import { getDbClient, disconnectDb, getDbAdapter } from '../database.js';
+import { getDbClient, disconnectDb, getDbAdapter } from '../core/database.js';
 
 describe('Repository Pattern', () => {
   let repository: MessageRepository;

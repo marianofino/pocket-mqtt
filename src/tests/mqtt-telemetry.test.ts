@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { connect } from 'mqtt';
 import { PocketMQTT } from '../index.js';
-import { getDbClient } from '../database.js';
+import { getDbClient } from '../core/database.js';
 import { telemetry as telemetrySchema, deviceToken as deviceTokenSchema } from '../db/schema.js';
 import { count, asc, eq } from 'drizzle-orm';
 

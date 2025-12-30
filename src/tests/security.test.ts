@@ -3,7 +3,7 @@ import { connect } from 'mqtt';
 import type { MqttClient } from 'mqtt';
 import { PocketMQTT } from '../index.js';
 import { getDbClient } from '../database.js';
-import { telemetry as telemetrySchema, deviceToken as deviceTokenSchema } from '../db/schema.js';
+import { telemetry as telemetrySchema, deviceToken as deviceTokenSchema } from '../core/db/schema.js';
 import { eq } from 'drizzle-orm';
 
 describe('MQTT Security - Device Token Authentication', () => {

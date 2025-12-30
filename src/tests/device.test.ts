@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { PocketMQTT } from '../index.js';
 import { getDbClient } from '../database.js';
-import { deviceToken as deviceTokenSchema } from '../db/schema.js';
+import { deviceToken as deviceTokenSchema } from '../core/db/schema.js';
 
 describe('Device API Routes', () => {
   let app: PocketMQTT;
