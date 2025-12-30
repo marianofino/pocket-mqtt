@@ -15,6 +15,13 @@
       "when": 1767066976923,
       "tag": "0001_lyrical_christian_walker",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1767113416886,
+      "tag": "0002_tan_the_fury",
+      "breakpoints": true
     }
   ]
 }

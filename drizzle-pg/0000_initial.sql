@@ -7,11 +7,14 @@ CREATE TABLE IF NOT EXISTS "Telemetry" (
 	"timestamp" timestamp DEFAULT now() NOT NULL
 );
 
--- Create DeviceToken table
+-- Create DeviceToken table with device metadata fields
 CREATE TABLE IF NOT EXISTS "DeviceToken" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"deviceId" text NOT NULL,
 	"token" text NOT NULL,
+	"name" text NOT NULL,
+	"labels" text,
+	"notes" text,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"expiresAt" timestamp,
 	CONSTRAINT "DeviceToken_deviceId_unique" UNIQUE("deviceId"),
