@@ -54,23 +54,23 @@ export class PocketMQTT {
       this.jwtSecret = providedSecret;
     }
     
+    // Initialize Fastify API first so we can use its logger
+    this.fastify = Fastify({
+      logger: true
+    });
+    
     // Initialize Aedes MQTT broker
     this.aedes = new Aedes();
     
-    // Initialize services
+    // Initialize services with logger
     this.telemetryService = new TelemetryService();
-    this.deviceService = new DeviceService();
+    this.deviceService = new DeviceService(undefined, this.fastify.log);
     
     // Setup MQTT authentication hooks
     this.setupMQTTAuthentication();
     
     // Hook into MQTT publish events to buffer telemetry
     this.setupMQTTHandlers();
-    
-    // Initialize Fastify API
-    this.fastify = Fastify({
-      logger: true
-    });
     
     // Setup JWT authentication
     this.setupJWT();

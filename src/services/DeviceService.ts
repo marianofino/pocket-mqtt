@@ -2,6 +2,7 @@ import { createDeviceRepository } from '../repositories/repository.factory.js';
 import type { DeviceRepository, Device, NewDevice, UpdateDevice } from '../repositories/DeviceRepository.interface.js';
 import { generateDeviceToken } from '../utils/token-generator.js';
 import { randomBytes } from 'crypto';
+import type { FastifyBaseLogger } from 'fastify';
 
 /**
  * Service for managing MQTT devices with auto-generated tokens.
@@ -13,9 +14,11 @@ import { randomBytes } from 'crypto';
  */
 export class DeviceService {
   private repository: DeviceRepository;
+  private logger?: FastifyBaseLogger;
 
-  constructor(repository?: DeviceRepository) {
+  constructor(repository?: DeviceRepository, logger?: FastifyBaseLogger) {
     this.repository = repository ?? createDeviceRepository();
+    this.logger = logger;
   }
 
   /**
@@ -157,7 +160,12 @@ export class DeviceService {
       }
       
       // Collision detected, try again
-      console.error(`Token collision detected (attempt ${i + 1}/${maxAttempts}), generating new token`);
+      const message = `Token collision detected (attempt ${i + 1}/${maxAttempts}), generating new token`;
+      if (this.logger) {
+        this.logger.warn(message);
+      } else {
+        console.error(message);
+      }
     }
     
     throw new Error('Failed to generate unique token after maximum attempts');
