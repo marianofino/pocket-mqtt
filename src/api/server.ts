@@ -90,13 +90,16 @@ export class APIServer {
      * 
      * Tries JWT first, then falls back to bearer token.
      * Ensures per-tenant scoping for proper isolation.
+     * 
+     * Note: JWT-authenticated users (dashboard/admin) do not have tenant context
+     * automatically attached. This is intentional - they can access multiple tenants.
+     * API key users are automatically scoped to their tenant via request.tenant.
      */
     this.fastify.decorate('authenticateFlexible', async (request: FastifyRequest, reply: FastifyReply) => {
       // First, try JWT authentication (for dashboard users)
       try {
         await request.jwtVerify();
-        // JWT authentication successful
-        // Note: JWT-based users may need tenant context added based on their token claims
+        // JWT authentication successful - no tenant context needed for dashboard users
         return;
       } catch (jwtError) {
         // JWT failed, try bearer token authentication

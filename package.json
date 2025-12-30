@@ -30,7 +30,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@fastify/bearer-auth": "^10.1.2",
     "@fastify/jwt": "^10.0.0",
     "aedes": "^0.51.3",
     "better-sqlite3": "^12.5.0",
