@@ -55,12 +55,13 @@ describe('Repository Pattern', () => {
 
   describe('findMany', () => {
     beforeEach(async () => {
-      // Insert test data
+      // Insert test data with timestamps relative to "now" to test ordering
+      const baseTime = Date.now();
       await repository.insertBatch([
-        { topic: 'sensor/temp', payload: '{"temp": 20}', timestamp: new Date('2025-01-01T10:00:00Z') },
-        { topic: 'sensor/temp', payload: '{"temp": 21}', timestamp: new Date('2025-01-01T11:00:00Z') },
-        { topic: 'sensor/humidity', payload: '{"humidity": 60}', timestamp: new Date('2025-01-01T12:00:00Z') },
-        { topic: 'sensor/temp', payload: '{"temp": 22}', timestamp: new Date('2025-01-01T13:00:00Z') },
+        { topic: 'sensor/temp', payload: '{"temp": 20}', timestamp: new Date(baseTime - 3 * 60 * 60 * 1000) }, // 3 hours ago
+        { topic: 'sensor/temp', payload: '{"temp": 21}', timestamp: new Date(baseTime - 2 * 60 * 60 * 1000) }, // 2 hours ago
+        { topic: 'sensor/humidity', payload: '{"humidity": 60}', timestamp: new Date(baseTime - 1 * 60 * 60 * 1000) }, // 1 hour ago
+        { topic: 'sensor/temp', payload: '{"temp": 22}', timestamp: new Date(baseTime) }, // now
       ]);
     });
 
