@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
-import type { DeviceService } from '../../services/DeviceService.js';
+import type { DeviceService } from '../../core/services/DeviceService.js';
 
 /**
  * Options for device routes plugin

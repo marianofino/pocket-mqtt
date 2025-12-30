@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
-import { TelemetryService } from '../services/TelemetryService.js';
-import { getDbClient, disconnectDb } from '../database.js';
-import { telemetry as telemetrySchema } from '../db/schema.js';
+import { TelemetryService } from '../core/services/TelemetryService.js';
+import { getDbClient, disconnectDb } from '../core/database.js';
+import { telemetry as telemetrySchema } from '../core/db/schema.js';
 import { count } from 'drizzle-orm';
 
 describe('TelemetryService', () => {

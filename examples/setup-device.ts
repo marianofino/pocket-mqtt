@@ -12,8 +12,44 @@
  * Usage: npx tsx examples/setup-device.ts
  */
 import { eq, desc } from 'drizzle-orm';
-import { getDbClient, disconnectDb } from '../src/database.js';
-import { deviceToken, type DeviceToken } from '../src/db/schema.js';
+import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
+import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { getDbAdapter, getDbClient, disconnectDb } from '../src/core/database.js';
+import * as sqliteSchema from '../src/core/db/schema.js';
+import * as postgresSchema from '../src/core/db/schema.pg.js';
+
+type DbContext =
+  | {
+      adapter: 'sqlite';
+      db: BetterSQLite3Database<typeof sqliteSchema>;
+      deviceTable: typeof sqliteSchema.deviceToken;
+    }
+  | {
+      adapter: 'postgres';
+      db: PostgresJsDatabase<typeof postgresSchema>;
+      deviceTable: typeof postgresSchema.deviceToken;
+    };
+
+type DeviceTokenRow = sqliteSchema.DeviceToken | postgresSchema.DeviceToken;
+
+function createDbContext(): DbContext {
+  const adapter = getDbAdapter();
+  const db = getDbClient();
+
+  if (adapter === 'postgres') {
+    return {
+      adapter,
+      db: db as PostgresJsDatabase<typeof postgresSchema>,
+      deviceTable: postgresSchema.deviceToken
+    };
+  }
+
+  return {
+    adapter: 'sqlite',
+    db: db as BetterSQLite3Database<typeof sqliteSchema>,
+    deviceTable: sqliteSchema.deviceToken
+  };
+}
 
 const devices = [
   {
@@ -41,12 +77,10 @@ const devices = [
 
 console.log('=== Device Token Setup ===\n');
 
-async function checkDatabaseSetup(): Promise<boolean> {
-  const db = getDbClient();
-
+async function checkDatabaseSetup(context: DbContext): Promise<boolean> {
   try {
     // Try to query the DeviceToken table to check if migrations are applied
-    await db.select({ id: deviceToken.id }).from(deviceToken).limit(1);
+    await context.db.select().from(context.deviceTable).limit(1);
     return true;
   } catch (error: unknown) {
     if (error instanceof Error && error.message.includes('no such table')) {
@@ -61,20 +95,37 @@ async function checkDatabaseSetup(): Promise<boolean> {
   }
 }
 
-async function findDevice(deviceId: string): Promise<DeviceToken | undefined> {
-  const db = getDbClient();
-  const result = await db
+async function findDevice(context: DbContext, deviceId: string): Promise<DeviceTokenRow | undefined> {
+  const result = await context.db
     .select()
-    .from(deviceToken)
-    .where(eq(deviceToken.deviceId, deviceId))
+    .from(context.deviceTable)
+    .where(eq(context.deviceTable.deviceId, deviceId))
     .limit(1);
 
   return result[0];
 }
 
-async function createDevice(deviceId: string, token: string, name: string, labels?: string[], notes?: string): Promise<void> {
-  const db = getDbClient();
-  await db.insert(deviceToken).values({
+async function createDevice(
+  context: DbContext,
+  deviceId: string,
+  token: string,
+  name: string,
+  labels?: string[],
+  notes?: string
+): Promise<void> {
+  if (context.adapter === 'postgres') {
+    await context.db.insert(context.deviceTable).values({
+      deviceId,
+      token,
+      name,
+      labels: labels ? JSON.stringify(labels) : null,
+      notes: notes || null,
+      expiresAt: null
+    });
+    return;
+  }
+
+  await context.db.insert(context.deviceTable).values({
     deviceId,
     token,
     name,
@@ -84,14 +135,15 @@ async function createDevice(deviceId: string, token: string, name: string, label
   });
 }
 
-async function listDevices(): Promise<DeviceToken[]> {
-  const db = getDbClient();
-  return db.select().from(deviceToken).orderBy(desc(deviceToken.createdAt));
+async function listDevices(context: DbContext): Promise<DeviceTokenRow[]> {
+  return context.db.select().from(context.deviceTable).orderBy(desc(context.deviceTable.createdAt));
 }
 
 async function setupDevices() {
+  const context = createDbContext();
+
   // Check if database is set up
-  const isSetup = await checkDatabaseSetup();
+  const isSetup = await checkDatabaseSetup(context);
   if (!isSetup) {
     process.exit(1);
   }
@@ -101,7 +153,7 @@ async function setupDevices() {
 
     for (const device of devices) {
       // Check if device already exists
-      const existing = await findDevice(device.deviceId);
+      const existing = await findDevice(context, device.deviceId);
 
       if (existing) {
         console.log(`⚠ Device "${device.deviceId}" already exists, skipping...`);
@@ -109,7 +161,7 @@ async function setupDevices() {
       }
 
       // Create device token
-      await createDevice(device.deviceId, device.token, device.name, device.labels, device.notes);
+      await createDevice(context, device.deviceId, device.token, device.name, device.labels, device.notes);
 
       console.log(`✓ Created device: ${device.deviceId}`);
       console.log(`  Name: ${device.name}`);
@@ -119,7 +171,7 @@ async function setupDevices() {
     }
 
     // List all devices
-    const allDevices = await listDevices();
+  const allDevices = await listDevices(context);
 
     console.log('\n=== All Device Tokens ===');
     console.log(`Total: ${allDevices.length}\n`);

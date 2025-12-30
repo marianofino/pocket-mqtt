@@ -123,8 +123,6 @@ export class TelemetryService {
     }, this.flushInterval);
   }
 
-
-
   /**
    * Stop the service and flush any remaining messages.
    */

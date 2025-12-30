@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
-import type { TelemetryService } from '../../services/TelemetryService.js';
-import type { DeviceService } from '../../services/DeviceService.js';
+import type { TelemetryService } from '../../core/services/TelemetryService.js';
+import type { DeviceService } from '../../core/services/DeviceService.js';
 import { healthRoutes } from './health.routes.js';
 import { authRoutes } from './auth.routes.js';
 import { telemetryRoutes } from './telemetry.routes.js';
