@@ -169,7 +169,9 @@ const devices = [
   {
     deviceId: 'my-device',
     token: 'my-secure-token',
-    description: 'My custom device'
+    name: 'My Custom Device',
+    labels: ['custom', 'test'],
+    notes: 'My custom device for testing'
   }
 ];
 ```

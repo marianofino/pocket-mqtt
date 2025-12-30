@@ -19,17 +19,23 @@ const devices = [
   {
     deviceId: 'sensor-001',
     token: 'my-secure-device-token-123',
-    description: 'Temperature sensor'
+    name: 'Temperature Sensor 001',
+    labels: ['sensor', 'temperature'],
+    notes: 'Temperature sensor for testing'
   },
   {
     deviceId: 'subscriber-001',
     token: 'subscriber-token-456',
-    description: 'MQTT subscriber client'
+    name: 'MQTT Subscriber 001',
+    labels: ['subscriber', 'test'],
+    notes: 'MQTT subscriber client for testing'
   },
   {
     deviceId: 'sensor-002',
     token: 'sensor-002-token-789',
-    description: 'Humidity sensor'
+    name: 'Humidity Sensor 002',
+    labels: ['sensor', 'humidity'],
+    notes: 'Humidity sensor for testing'
   }
 ];
 
@@ -66,11 +72,14 @@ async function findDevice(deviceId: string): Promise<DeviceToken | undefined> {
   return result[0];
 }
 
-async function createDevice(deviceId: string, token: string): Promise<void> {
+async function createDevice(deviceId: string, token: string, name: string, labels?: string[], notes?: string): Promise<void> {
   const db = getDbClient();
   await db.insert(deviceToken).values({
     deviceId,
     token,
+    name,
+    labels: labels ? JSON.stringify(labels) : null,
+    notes: notes || null,
     expiresAt: null
   });
 }
@@ -100,11 +109,13 @@ async function setupDevices() {
       }
 
       // Create device token
-      await createDevice(device.deviceId, device.token);
+      await createDevice(device.deviceId, device.token, device.name, device.labels, device.notes);
 
       console.log(`✓ Created device: ${device.deviceId}`);
+      console.log(`  Name: ${device.name}`);
       console.log(`  Token: ${device.token}`);
-      console.log(`  Description: ${device.description}\n`);
+      console.log(`  Labels: ${device.labels?.join(', ') || 'None'}`);
+      console.log(`  Notes: ${device.notes}\n`);
     }
 
     // List all devices
@@ -115,7 +126,10 @@ async function setupDevices() {
 
     allDevices.forEach((device, index) => {
       console.log(`${index + 1}. Device ID: ${device.deviceId}`);
+      console.log(`   Name: ${device.name}`);
       console.log(`   Token: ${device.token}`);
+      console.log(`   Labels: ${device.labels || 'None'}`);
+      console.log(`   Notes: ${device.notes || 'None'}`);
       console.log(`   Created: ${device.createdAt}`);
       console.log(`   Expires: ${device.expiresAt || 'Never'}\n`);
     });
