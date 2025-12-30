@@ -43,10 +43,33 @@ export async function deviceRoutes(
       return;
     }
 
-    // Validate labels (optional, must be array of strings if provided)
-    if (labels !== undefined && (!Array.isArray(labels) || !labels.every(l => typeof l === 'string'))) {
-      reply.code(400).send({ error: 'labels must be an array of strings' });
-      return;
+    // Validate labels (optional, must be array of non-empty strings within limits if provided)
+    const MAX_LABELS = 50;
+    const MAX_LABEL_LENGTH = 100;
+    if (labels !== undefined) {
+      if (!Array.isArray(labels)) {
+        reply.code(400).send({ error: 'labels must be an array of strings' });
+        return;
+      }
+
+      if (labels.length > MAX_LABELS) {
+        reply.code(400).send({ error: `labels must not contain more than ${MAX_LABELS} items` });
+        return;
+      }
+
+      const invalidLabel = labels.find(
+        (l) =>
+          typeof l !== 'string' ||
+          l.trim().length === 0 ||
+          l.length > MAX_LABEL_LENGTH
+      );
+
+      if (invalidLabel !== undefined) {
+        reply.code(400).send({
+          error: `each label must be a non-empty string with a maximum length of ${MAX_LABEL_LENGTH} characters`
+        });
+        return;
+      }
     }
 
     // Validate notes (optional, must be string if provided)
