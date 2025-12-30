@@ -157,7 +157,7 @@ export class DeviceService {
       }
       
       // Collision detected, try again
-      console.warn(`Token collision detected (attempt ${i + 1}/${maxAttempts}), generating new token`);
+      console.error(`Token collision detected (attempt ${i + 1}/${maxAttempts}), generating new token`);
     }
     
     throw new Error('Failed to generate unique token after maximum attempts');

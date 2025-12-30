@@ -9,6 +9,99 @@ export interface DeviceRoutesOptions extends FastifyPluginOptions {
 }
 
 /**
+ * Validation constants for device fields
+ */
+const MAX_NAME_LENGTH = 255;
+const MAX_NOTES_LENGTH = 1000;
+const MAX_LABELS = 50;
+const MAX_LABEL_LENGTH = 100;
+
+/**
+ * Validation result interface
+ */
+interface ValidationResult {
+  valid: boolean;
+  error?: string;
+}
+
+/**
+ * Validate device name field
+ */
+function validateName(name: unknown, required: boolean = true): ValidationResult {
+  if (name === undefined) {
+    return required 
+      ? { valid: false, error: 'name is required' }
+      : { valid: true };
+  }
+
+  if (typeof name !== 'string') {
+    return { valid: false, error: 'name must be a string' };
+  }
+
+  if (name.trim().length === 0) {
+    return { valid: false, error: 'name must be a non-empty string' };
+  }
+
+  if (name.length > MAX_NAME_LENGTH) {
+    return { valid: false, error: `name must not exceed ${MAX_NAME_LENGTH} characters` };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Validate device labels field
+ */
+function validateLabels(labels: unknown): ValidationResult {
+  if (labels === undefined) {
+    return { valid: true };
+  }
+
+  if (!Array.isArray(labels)) {
+    return { valid: false, error: 'labels must be an array of strings' };
+  }
+
+  if (labels.length > MAX_LABELS) {
+    return { valid: false, error: `labels must not contain more than ${MAX_LABELS} items` };
+  }
+
+  const invalidLabel = labels.find(
+    (l) =>
+      typeof l !== 'string' ||
+      l.trim().length === 0 ||
+      l.length > MAX_LABEL_LENGTH
+  );
+
+  if (invalidLabel !== undefined) {
+    return {
+      valid: false,
+      error: `each label must be a non-empty string with a maximum length of ${MAX_LABEL_LENGTH} characters`
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Validate device notes field
+ */
+function validateNotes(notes: unknown): ValidationResult {
+  if (notes === undefined) {
+    return { valid: true };
+  }
+
+  if (typeof notes !== 'string') {
+    return { valid: false, error: 'notes must be a string' };
+  }
+
+  if (notes.length > MAX_NOTES_LENGTH) {
+    return { valid: false, error: `notes must not exceed ${MAX_NOTES_LENGTH} characters` };
+  }
+
+  return { valid: true };
+}
+
+/**
  * Device route plugin
  * Provides endpoints for managing MQTT devices with auto-generated tokens
  * Requires JWT authentication for all endpoints
@@ -35,52 +128,29 @@ export async function deviceRoutes(
     const { name, labels, notes } = body ?? {};
     
     // Validate name (required)
-    if (
-      typeof name !== 'string' ||
-      name.trim().length === 0
-    ) {
-      reply.code(400).send({ error: 'name is required and must be a non-empty string' });
+    const nameValidation = validateName(name, true);
+    if (!nameValidation.valid) {
+      reply.code(400).send({ error: nameValidation.error });
       return;
     }
 
-    // Validate labels (optional, must be array of non-empty strings within limits if provided)
-    const MAX_LABELS = 50;
-    const MAX_LABEL_LENGTH = 100;
-    if (labels !== undefined) {
-      if (!Array.isArray(labels)) {
-        reply.code(400).send({ error: 'labels must be an array of strings' });
-        return;
-      }
-
-      if (labels.length > MAX_LABELS) {
-        reply.code(400).send({ error: `labels must not contain more than ${MAX_LABELS} items` });
-        return;
-      }
-
-      const invalidLabel = labels.find(
-        (l) =>
-          typeof l !== 'string' ||
-          l.trim().length === 0 ||
-          l.length > MAX_LABEL_LENGTH
-      );
-
-      if (invalidLabel !== undefined) {
-        reply.code(400).send({
-          error: `each label must be a non-empty string with a maximum length of ${MAX_LABEL_LENGTH} characters`
-        });
-        return;
-      }
+    // Validate labels (optional)
+    const labelsValidation = validateLabels(labels);
+    if (!labelsValidation.valid) {
+      reply.code(400).send({ error: labelsValidation.error });
+      return;
     }
 
-    // Validate notes (optional, must be string if provided)
-    if (notes !== undefined && typeof notes !== 'string') {
-      reply.code(400).send({ error: 'notes must be a string' });
+    // Validate notes (optional)
+    const notesValidation = validateNotes(notes);
+    if (!notesValidation.valid) {
+      reply.code(400).send({ error: notesValidation.error });
       return;
     }
 
     try {
       const device = await deviceService.createDevice({
-        name,
+        name: name!.trim(),
         labels,
         notes
       });
@@ -280,25 +350,32 @@ export async function deviceRoutes(
     }
 
     // Validate name if provided
-    if (name !== undefined && (typeof name !== 'string' || name.trim().length === 0)) {
-      reply.code(400).send({ error: 'name must be a non-empty string' });
+    const nameValidation = validateName(name, false);
+    if (!nameValidation.valid) {
+      reply.code(400).send({ error: nameValidation.error });
       return;
     }
 
     // Validate labels if provided
-    if (labels !== undefined && (!Array.isArray(labels) || !labels.every(l => typeof l === 'string'))) {
-      reply.code(400).send({ error: 'labels must be an array of strings' });
+    const labelsValidation = validateLabels(labels);
+    if (!labelsValidation.valid) {
+      reply.code(400).send({ error: labelsValidation.error });
       return;
     }
 
     // Validate notes if provided
-    if (notes !== undefined && typeof notes !== 'string') {
-      reply.code(400).send({ error: 'notes must be a string' });
+    const notesValidation = validateNotes(notes);
+    if (!notesValidation.valid) {
+      reply.code(400).send({ error: notesValidation.error });
       return;
     }
     
     try {
-      const device = await deviceService.updateDevice(id, { name: name?.trim(), labels, notes });
+      const device = await deviceService.updateDevice(id, { 
+        name: name?.trim(), 
+        labels, 
+        notes 
+      });
       
       if (!device) {
         reply.code(404).send({ error: 'Device not found' });

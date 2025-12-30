@@ -132,6 +132,29 @@ describe('Device API Routes', () => {
       expect(data.error).toContain('name');
     });
 
+    it('should reject creation with whitespace-only name', async () => {
+      // Given: Device data with whitespace-only name
+      const deviceData = {
+        name: '   ',
+        labels: ['test']
+      };
+
+      // When: Creating a device
+      const response = await fetch(`http://${API_HOST}:${API_PORT}/api/devices`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${jwtToken}`
+        },
+        body: JSON.stringify(deviceData)
+      });
+
+      // Then: Should return 400 error
+      expect(response.status).toBe(400);
+      const data = await response.json();
+      expect(data.error).toContain('name');
+    });
+
     it('should reject creation with invalid labels (not an array)', async () => {
       // Given: Device data with invalid labels
       const deviceData = {

@@ -46,6 +46,7 @@ export class SQLiteDeviceRepository implements DeviceRepository {
     
     return await this.db.select()
       .from(deviceToken)
+      .orderBy(deviceToken.name)
       .limit(limit)
       .offset(offset);
   }
