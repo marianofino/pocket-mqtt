@@ -225,6 +225,7 @@ describe('MQTT Security - Device Token Authentication', () => {
 describe('REST API Security - JWT Authentication', () => {
   let app: PocketMQTT;
   let db: ReturnType<typeof getDbClient>;
+  let defaultTenantId: number;
   const MQTT_PORT = 1887;
   const API_PORT = 3004;
 
@@ -233,6 +234,15 @@ describe('REST API Security - JWT Authentication', () => {
     
     // Clean up any existing data
     await db.delete(telemetrySchema);
+    await db.delete(tenantSchema);
+    
+    // Create a default tenant with ID=1
+    const tenantResult = await db.insert(tenantSchema).values({
+      id: 1,
+      name: 'security-jwt-test-tenant',
+      apiKey: 'security-jwt-test-api-key',
+    }).returning();
+    defaultTenantId = tenantResult[0].id;
     
     // Initialize PocketMQTT
     app = new PocketMQTT({
@@ -250,6 +260,7 @@ describe('REST API Security - JWT Authentication', () => {
   afterAll(async () => {
     // Clean up data before stopping
     await db.delete(telemetrySchema);
+    await db.delete(tenantSchema);
     
     // Stop the app
     await app.stop();
@@ -340,7 +351,8 @@ describe('REST API Security - JWT Authentication', () => {
       },
       body: JSON.stringify({
         topic: 'api/secure/topic',
-        payload: 'secure payload'
+        payload: 'secure payload',
+        tenantId: defaultTenantId
       })
     });
 

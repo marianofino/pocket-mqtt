@@ -22,7 +22,7 @@ export function setupMQTTAuthentication(aedes: Aedes): void {
   const adapter = getDbAdapter();
   
   // Authenticate hook - validates device tokens on connection
-  aedes.authenticate = async (_client: Client, username: string | undefined, password: Buffer | undefined, callback: (error: AuthenticateError | null, success: boolean) => void) => {
+  aedes.authenticate = async (client: Client, username: string | undefined, password: Buffer | undefined, callback: (error: AuthenticateError | null, success: boolean) => void) => {
     // Reject connections without credentials
     if (!username || !password) {
       callback(null, false);
@@ -33,7 +33,7 @@ export function setupMQTTAuthentication(aedes: Aedes): void {
       const token = password.toString();
       
       // Look up device token in database based on adapter
-      let deviceTokenRecord: { deviceId: string; token: string; expiresAt: Date | null } | undefined;
+      let deviceTokenRecord: { deviceId: string; token: string; expiresAt: Date | null; tenantId: number } | undefined;
       if (adapter === 'postgres') {
         const db = getDbClient() as PostgresDbClient;
         const results = await db.select()
@@ -66,6 +66,9 @@ export function setupMQTTAuthentication(aedes: Aedes): void {
         callback(null, false);
         return;
       }
+
+      // Attach tenantId to client for use in publish handler
+      (client as any).tenantId = deviceTokenRecord.tenantId;
 
       // Authentication successful
       callback(null, true);

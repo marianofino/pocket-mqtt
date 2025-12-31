@@ -1,12 +1,6 @@
 import { createMessageRepository } from '../repositories/repository.factory.js';
 import type { MessageRepository } from '../repositories/MessageRepository.interface.js';
 
-/**
- * Default tenant ID for telemetry messages when tenant context is not available.
- * This provides backward compatibility while transitioning to full multi-tenancy.
- */
-const DEFAULT_TENANT_ID = 1;
-
 interface TelemetryMessage {
   tenantId: number;
   topic: string;
@@ -53,11 +47,15 @@ export class TelemetryService {
    * 
    * @param topic MQTT topic
    * @param payload Message payload
-   * @param tenantId Optional tenant ID (defaults to DEFAULT_TENANT_ID)
+   * @param tenantId Required tenant ID
    */
-  async addMessage(topic: string, payload: string, tenantId: number = DEFAULT_TENANT_ID): Promise<void> {
+  async addMessage(topic: string, payload: string, tenantId: number): Promise<void> {
     if (!this.isRunning) {
       throw new Error('TelemetryService is stopped');
+    }
+
+    if (!tenantId || typeof tenantId !== 'number' || tenantId < 1) {
+      throw new Error('tenantId is required and must be a positive number');
     }
 
     const message: TelemetryMessage = {

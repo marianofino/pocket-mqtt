@@ -32,8 +32,8 @@ export async function telemetryRoutes(
   fastify.post('/api/v1/telemetry', {
     onRequest: [fastify.authenticateFlexible]
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    const body = request.body as { topic: string; payload: string } | undefined;
-    const { topic, payload } = body ?? {};
+    const body = request.body as { topic: string; payload: string; tenantId?: number } | undefined;
+    const { topic, payload, tenantId } = body ?? {};
     
     // Stricter validation for empty strings
     if (
@@ -46,6 +46,29 @@ export async function telemetryRoutes(
       return;
     }
 
+    // Determine tenantId: use from authenticated API key user or require in body for JWT users
+    let effectiveTenantId: number;
+    if (request.tenant) {
+      // API key user - use their tenant automatically
+      effectiveTenantId = request.tenant.id;
+      
+      // If tenantId provided in body, it must match authenticated tenant
+      if (tenantId !== undefined && tenantId !== effectiveTenantId) {
+        return reply.code(403).send({ 
+          error: 'Forbidden',
+          message: 'Cannot submit telemetry for a different tenant'
+        });
+      }
+    } else {
+      // JWT user - tenantId must be provided in body
+      if (!tenantId || typeof tenantId !== 'number' || tenantId < 1) {
+        return reply.code(400).send({ 
+          error: 'tenantId is required in request body and must be a positive integer'
+        });
+      }
+      effectiveTenantId = tenantId;
+    }
+
     // Validate payload size to prevent memory exhaustion
     const payloadSize = Buffer.byteLength(payload, 'utf8');
     if (payloadSize > maxPayloadSize) {
@@ -53,7 +76,7 @@ export async function telemetryRoutes(
       return;
     }
 
-    await telemetryService.addMessage(topic, payload);
+    await telemetryService.addMessage(topic, payload, effectiveTenantId);
     
     return { success: true, message: 'Telemetry data buffered' };
   });

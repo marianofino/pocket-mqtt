@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 
 /**
  * Pepper value for tenant token validation.
@@ -21,6 +21,7 @@ if (!TENANT_TOKEN_PEPPER) {
 
 /**
  * Validate tenant token by hashing name + pepper.
+ * Uses constant-time comparison to prevent timing attacks.
  * 
  * @param name Tenant name
  * @param token Token to validate
@@ -28,7 +29,21 @@ if (!TENANT_TOKEN_PEPPER) {
  */
 export function validateTenantToken(name: string, token: string): boolean {
   const expectedHash = hashTenantName(name);
-  return expectedHash === token;
+  
+  // Use constant-time comparison to prevent timing attacks
+  if (expectedHash.length !== token.length) {
+    return false;
+  }
+  
+  const expectedBuffer = Buffer.from(expectedHash, 'utf8');
+  const tokenBuffer = Buffer.from(token, 'utf8');
+  
+  try {
+    return timingSafeEqual(expectedBuffer, tokenBuffer);
+  } catch {
+    // timingSafeEqual throws if buffers have different lengths
+    return false;
+  }
 }
 
 /**

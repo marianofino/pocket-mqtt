@@ -1,6 +1,6 @@
 import { createUserRepository } from '../repositories/repository.factory.js';
 import type { UserRepository, User, NewUser } from '../repositories/UserRepository.interface.js';
-import { createHash, randomBytes } from 'crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 
 /**
  * Service for managing per-tenant admin users.
@@ -94,6 +94,7 @@ export class UserService {
 
   /**
    * Verify a user's password.
+   * Uses constant-time comparison to prevent timing attacks.
    * 
    * @param user User to verify
    * @param password Password to verify
@@ -101,7 +102,21 @@ export class UserService {
    */
   verifyPassword(user: User, password: string): boolean {
     const hash = this.hashPassword(password, this.extractSalt(user.passwordHash));
-    return hash === user.passwordHash;
+    
+    // Use constant-time comparison to prevent timing attacks
+    if (hash.length !== user.passwordHash.length) {
+      return false;
+    }
+    
+    const hashBuffer = Buffer.from(hash, 'utf8');
+    const storedHashBuffer = Buffer.from(user.passwordHash, 'utf8');
+    
+    try {
+      return timingSafeEqual(hashBuffer, storedHashBuffer);
+    } catch {
+      // timingSafeEqual throws if buffers have different lengths
+      return false;
+    }
   }
 
   /**
@@ -139,11 +154,12 @@ export class UserService {
    * 
    * @param passwordHash Hashed password (format: salt$hash)
    * @returns Salt
+   * @throws Error if password hash format is invalid
    */
   private extractSalt(passwordHash: string): string {
     const separatorIndex = passwordHash.indexOf('$');
 
-    // Validate format: must contain a '$' with a non-empty salt and hash parts
+    // Validate format: must contain a '$' with non-empty salt and hash parts
     if (separatorIndex <= 0 || separatorIndex === passwordHash.length - 1) {
       throw new Error('Invalid password hash format; expected "salt$hash".');
     }

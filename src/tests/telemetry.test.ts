@@ -49,9 +49,9 @@ describe('TelemetryService', () => {
     it('should buffer messages in memory without immediately writing to database', async () => {
       // Given: Service is running
       // When: Multiple messages are added
-      await service.addMessage('test/topic1', 'payload1');
-      await service.addMessage('test/topic2', 'payload2');
-      await service.addMessage('test/topic3', 'payload3');
+      await service.addMessage('test/topic1', 'payload1', 1);
+      await service.addMessage('test/topic2', 'payload2', 1);
+      await service.addMessage('test/topic3', 'payload3', 1);
 
       // Then: Messages should be buffered, not in database yet
       const result = await db.select({ count: count() }).from(telemetrySchema);
@@ -62,7 +62,7 @@ describe('TelemetryService', () => {
       // Given: Service is running
       // When: 10 messages are received
       for (let i = 0; i < 10; i++) {
-        await service.addMessage(`test/topic${i}`, `payload${i}`);
+        await service.addMessage(`test/topic${i}`, `payload${i}`, 1);
       }
 
       // Then: They are buffered in memory
@@ -75,9 +75,9 @@ describe('TelemetryService', () => {
     it('should flush buffered messages after 2 seconds', async () => {
       // Given: Service is running
       // When: Messages are added
-      await service.addMessage('test/topic1', 'payload1');
-      await service.addMessage('test/topic2', 'payload2');
-      await service.addMessage('test/topic3', 'payload3');
+      await service.addMessage('test/topic1', 'payload1', 1);
+      await service.addMessage('test/topic2', 'payload2', 1);
+      await service.addMessage('test/topic3', 'payload3', 1);
 
       // Then: After 2+ seconds, all messages are flushed
       await new Promise(resolve => setTimeout(resolve, 2100));
@@ -94,7 +94,7 @@ describe('TelemetryService', () => {
       // Given: Service is running
       // When: 10 messages are received in rapid succession
       for (let i = 0; i < 10; i++) {
-        await service.addMessage(`test/topic${i}`, `payload${i}`);
+        await service.addMessage(`test/topic${i}`, `payload${i}`, 1);
       }
 
       // Check they're buffered
@@ -110,8 +110,8 @@ describe('TelemetryService', () => {
 
     it('should handle manual flush', async () => {
       // Given: Messages are buffered
-      await service.addMessage('test/topic1', 'payload1');
-      await service.addMessage('test/topic2', 'payload2');
+      await service.addMessage('test/topic1', 'payload1', 1);
+      await service.addMessage('test/topic2', 'payload2', 1);
 
       // When: Manual flush is called
       await service.flush();
@@ -131,7 +131,7 @@ describe('TelemetryService', () => {
       // When: High-frequency writes occur
       const promises = [];
       for (let i = 0; i < messageCount; i++) {
-        promises.push(service.addMessage(`test/topic${i % 10}`, `payload${i}`));
+        promises.push(service.addMessage(`test/topic${i % 10}`, `payload${i}`, 1));
       }
       await Promise.all(promises);
 
@@ -151,7 +151,7 @@ describe('TelemetryService', () => {
     it('should continue accepting messages during flush', async () => {
       // Given: Service with some buffered messages
       for (let i = 0; i < 100; i++) {
-        await service.addMessage(`test/topic${i}`, `payload${i}`);
+        await service.addMessage(`test/topic${i}`, `payload${i}`, 1);
       }
 
       // When: Flush happens while new messages arrive
@@ -159,7 +159,7 @@ describe('TelemetryService', () => {
       
       // Add more messages during flush window
       for (let i = 100; i < 200; i++) {
-        await service.addMessage(`test/topic${i}`, `payload${i}`);
+        await service.addMessage(`test/topic${i}`, `payload${i}`, 1);
       }
 
       // Wait for second flush
@@ -174,7 +174,7 @@ describe('TelemetryService', () => {
   describe('Error handling', () => {
     it('should not lose messages if flush fails', async () => {
       // This test verifies resilience - if flush fails, messages aren't lost
-      await service.addMessage('test/topic1', 'payload1');
+      await service.addMessage('test/topic1', 'payload1', 1);
       
       // Force a flush
       await service.flush();

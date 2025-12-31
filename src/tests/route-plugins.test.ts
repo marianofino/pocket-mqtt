@@ -6,6 +6,7 @@ import { deviceToken as deviceTokenSchema, tenant as tenantSchema } from '../cor
 describe('Route Plugin Integration', () => {
   let app: PocketMQTT;
   let db: ReturnType<typeof getDbClient>;
+  let defaultTenantId: number;
   const MQTT_PORT = 1890;
   const API_PORT = 3010;
   const API_HOST = '127.0.0.1';
@@ -24,7 +25,7 @@ describe('Route Plugin Integration', () => {
       name: 'default-tenant',
       apiKey: 'default-api-key-for-testing',
     }).returning();
-    const defaultTenantId = tenantResult[0].id;
+    defaultTenantId = tenantResult[0].id;
     
     // Create test device token
     await db.insert(deviceTokenSchema).values({
@@ -145,7 +146,8 @@ describe('Route Plugin Integration', () => {
         },
         body: JSON.stringify({
           topic: 'test/route-plugin',
-          payload: 'test data'
+          payload: 'test data',
+          tenantId: defaultTenantId
         })
       });
       
@@ -219,7 +221,7 @@ describe('Route Plugin Integration', () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ topic: 'test/independence', payload: 'test' })
+        body: JSON.stringify({ topic: 'test/independence', payload: 'test', tenantId: defaultTenantId })
       });
       expect(telemetryPostResponse.ok).toBe(true);
       

@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
 
 /**
  * Tenant table schema
@@ -27,7 +27,7 @@ export const user = sqliteTable('User', {
 }, (table) => ({
   tenantIdIdx: index('User_tenantId_idx').on(table.tenantId),
   // Unique constraint: username must be unique per tenant
-  uniqueUsernamePerTenant: index('User_tenantId_username_unique').on(table.tenantId, table.username),
+  uniqueUsernamePerTenant: unique('User_tenantId_username_unique').on(table.tenantId, table.username),
 }));
 
 /**

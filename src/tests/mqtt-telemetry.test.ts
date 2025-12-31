@@ -232,7 +232,7 @@ describe('Telemetry API Endpoints', () => {
   }, 15000);
 
   it('should submit telemetry via POST /api/v1/telemetry', async () => {
-    // When: POST telemetry data
+    // When: POST telemetry data with tenantId
     const response = await fetch(`http://localhost:${API_PORT}/api/v1/telemetry`, {
       method: 'POST',
       headers: {
@@ -241,7 +241,8 @@ describe('Telemetry API Endpoints', () => {
       },
       body: JSON.stringify({
         topic: 'api/test/topic',
-        payload: 'test payload from API'
+        payload: 'test payload from API',
+        tenantId: defaultTenantId
       })
     });
 
