@@ -21,6 +21,11 @@ const RATE_LIMIT_MAX_REQUESTS = 5; // Max 5 tenant creation attempts per minute 
  * Simple rate limiter for tenant creation endpoint
  */
 function checkRateLimit(ip: string): boolean {
+  // Disable rate limiting in test environment to keep tests deterministic
+  if (process.env.NODE_ENV === 'test') {
+    return true;
+  }
+
   const now = Date.now();
   const entry = rateLimitMap.get(ip);
 

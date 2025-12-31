@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { PocketMQTT } from '../index.js';
 import { getDbClient } from '../core/database.js';
 import { deviceToken as deviceTokenSchema, tenant as tenantSchema } from '../core/db/schema.js';
-import { hashTenantName } from '../core/utils/tenant-utils.js';
+import { generateTenantToken } from '../core/utils/tenant-utils.js';
 
 describe('Device API Routes', () => {
   let app: PocketMQTT;
@@ -29,8 +29,8 @@ describe('Device API Routes', () => {
     await app.start();
 
     // Create a default tenant for device tests
-    const tenantName = 'default-tenant';
-    const token = hashTenantName(tenantName);
+  const tenantName = 'default-tenant';
+  const token = generateTenantToken(tenantName);
     const tenantResponse = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/tenant`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
