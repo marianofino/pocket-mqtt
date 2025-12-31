@@ -141,7 +141,14 @@ export class UserService {
    * @returns Salt
    */
   private extractSalt(passwordHash: string): string {
-    return passwordHash.split('$')[0];
+    const separatorIndex = passwordHash.indexOf('$');
+
+    // Validate format: must contain a '$' with a non-empty salt and hash parts
+    if (separatorIndex <= 0 || separatorIndex === passwordHash.length - 1) {
+      throw new Error('Invalid password hash format; expected "salt$hash".');
+    }
+
+    return passwordHash.substring(0, separatorIndex);
   }
 
   /**
