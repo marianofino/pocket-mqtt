@@ -85,10 +85,10 @@ export class APIServer {
 
     /**
      * Flexible authentication decorator that supports both:
-     * - JWT tokens (for dashboard users)
-     * - Bearer API keys (for external systems)
+     * - JWT tokens (for dashboard users) via Authorization: Bearer <jwt>
+     * - Tenant API keys (for external systems) via X-API-Key: <apiKey>
      * 
-     * Tries JWT first, then falls back to bearer token.
+     * Tries JWT first, then falls back to X-API-Key header.
      * Ensures per-tenant scoping for proper isolation.
      * 
      * Note: JWT-authenticated users (dashboard/admin) do not have tenant context
@@ -96,32 +96,39 @@ export class APIServer {
      * API key users are automatically scoped to their tenant via request.tenant.
      */
     this.fastify.decorate('authenticateFlexible', async (request: FastifyRequest, reply: FastifyReply) => {
-      // First, try JWT authentication (for dashboard users)
-      try {
-        await request.jwtVerify();
-        // JWT authentication successful - no tenant context needed for dashboard users
-        return;
-      } catch (jwtError) {
-        // JWT failed, try bearer token authentication
+      // First, try JWT authentication (for dashboard users via Authorization header)
+      const authHeader = request.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        try {
+          await request.jwtVerify();
+          // JWT authentication successful - no tenant context needed for dashboard users
+          return;
+        } catch (jwtError) {
+          // JWT verification failed, return error since Bearer token was provided but invalid
+          return reply.code(401).send({ 
+            error: 'Unauthorized',
+            message: 'Invalid JWT token'
+          });
+        }
       }
 
-      // Try bearer token authentication (for API keys)
-      const authHeader = request.headers.authorization;
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      // Try X-API-Key header authentication (for external systems)
+      const apiKeyHeader = request.headers['x-api-key'];
+      if (!apiKeyHeader || typeof apiKeyHeader !== 'string') {
         return reply.code(401).send({ 
           error: 'Unauthorized',
-          message: 'Valid JWT token or Bearer API key required'
+          message: 'Valid JWT token (Authorization: Bearer) or API key (X-API-Key) required'
         });
       }
 
-      const token = authHeader.substring(7);
-      if (!token || token.trim().length === 0) {
-        return reply.code(401).send({ error: 'Invalid authentication token' });
+      const apiKey = apiKeyHeader.trim();
+      if (apiKey.length === 0) {
+        return reply.code(401).send({ error: 'Invalid API key' });
       }
 
       // Validate as tenant API key
       try {
-        const tenant = await this.tenantService.getTenantByApiKey(token.trim());
+        const tenant = await this.tenantService.getTenantByApiKey(apiKey);
         if (!tenant) {
           return reply.code(401).send({ error: 'Invalid API key' });
         }

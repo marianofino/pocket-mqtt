@@ -248,7 +248,7 @@ describe('Tenant API Routes', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${tenantApiKey}`
+          'X-API-Key': tenantApiKey
         },
         body: JSON.stringify({
           username: 'admin',
@@ -267,7 +267,7 @@ describe('Tenant API Routes', () => {
       expect(data.user).not.toHaveProperty('passwordHash'); // Should not expose password hash
     });
 
-    it('should reject user creation without Authorization header', async () => {
+    it('should reject user creation without authentication header', async () => {
       const response = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/tenant/${tenantId}/user`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -288,7 +288,7 @@ describe('Tenant API Routes', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer invalid-api-key-12345'
+          'X-API-Key': 'invalid-api-key-12345'
         },
         body: JSON.stringify({
           username: 'admin',
@@ -321,7 +321,7 @@ describe('Tenant API Routes', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${tenantApiKey}` // Using first tenant's key
+          'X-API-Key': tenantApiKey // Using first tenant's key
         },
         body: JSON.stringify({
           username: 'admin',
@@ -341,7 +341,7 @@ describe('Tenant API Routes', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${tenantApiKey}`
+          'X-API-Key': tenantApiKey
         },
         body: JSON.stringify({
           username: 'admin',
@@ -355,7 +355,7 @@ describe('Tenant API Routes', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${tenantApiKey}`
+          'X-API-Key': tenantApiKey
         },
         body: JSON.stringify({
           username: 'admin',
@@ -374,7 +374,7 @@ describe('Tenant API Routes', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${tenantApiKey}`
+          'X-API-Key': tenantApiKey
         },
         body: JSON.stringify({
           password: 'securepassword123'
@@ -392,7 +392,7 @@ describe('Tenant API Routes', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${tenantApiKey}`
+          'X-API-Key': tenantApiKey
         },
         body: JSON.stringify({
           username: 'admin'
@@ -410,7 +410,7 @@ describe('Tenant API Routes', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${tenantApiKey}`
+          'X-API-Key': tenantApiKey
         },
         body: JSON.stringify({
           username: 'admin',
@@ -429,7 +429,7 @@ describe('Tenant API Routes', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${tenantApiKey}`
+          'X-API-Key': tenantApiKey
         },
         body: JSON.stringify({
           username: 'admin',
