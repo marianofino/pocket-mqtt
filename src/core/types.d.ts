@@ -11,3 +11,18 @@ declare module 'fastify' {
     tenant?: Tenant;
   }
 }
+
+declare module '@fastify/jwt' {
+  interface FastifyJWT {
+    payload: {
+      tenantId?: number;
+      userId?: number;
+      username?: string;
+    };
+    user: {
+      tenantId?: number;
+      userId?: number;
+      username?: string;
+    };
+  }
+}

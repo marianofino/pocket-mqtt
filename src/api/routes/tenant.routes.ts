@@ -10,6 +10,40 @@ export interface TenantRoutesOptions extends FastifyPluginOptions {
   userService: UserService;
 }
 
+// Rate limiting state for tenant creation (in-memory, simple implementation)
+// This is a module-level variable so it persists across test runs within the same process
+// For production, consider using a distributed cache (Redis) for rate limiting
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_WINDOW_MS = 60000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 5; // Max 5 tenant creation attempts per minute per IP
+
+/**
+ * Simple rate limiter for tenant creation endpoint
+ */
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+
+  if (!entry || now > entry.resetTime) {
+    // New window or expired window
+    rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
+    // Clean up expired entries to prevent memory leak
+    for (const [key, value] of rateLimitMap.entries()) {
+      if (now > value.resetTime) {
+        rateLimitMap.delete(key);
+      }
+    }
+    return true;
+  }
+
+  if (entry.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return false; // Rate limit exceeded
+  }
+
+  entry.count++;
+  return true;
+}
+
 /**
  * Tenant route plugin
  * Provides endpoints for managing tenants and per-tenant users
@@ -21,8 +55,9 @@ export async function tenantRoutes(
   const { tenantService, userService } = opts;
 
   /**
-   * POST /api/v1/tenant - Create a new tenant (public)
-   * Validates token and creates tenant with unique API key
+   * POST /api/v1/tenant - Create a new tenant (public, rate-limited)
+   * Validates token (with 1-minute expiration) and creates tenant with unique API key
+   * Rate limit: 5 successful creations per minute per IP address
    * 
    * @param request - Fastify request with name and token in body
    * @param reply - Fastify reply object
@@ -40,6 +75,15 @@ export async function tenantRoutes(
     // Validate token
     if (!token || typeof token !== 'string' || token.trim().length === 0) {
       return reply.code(400).send({ error: 'token is required and must be a non-empty string' });
+    }
+
+    // Apply rate limiting based on IP address (only for valid requests)
+    const clientIp = request.ip;
+    if (!checkRateLimit(clientIp)) {
+      return reply.code(429).send({
+        error: 'Too Many Requests',
+        message: 'Rate limit exceeded. Maximum 5 tenant creation attempts per minute.'
+      });
     }
 
     try {

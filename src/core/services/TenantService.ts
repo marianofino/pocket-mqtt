@@ -77,6 +77,16 @@ export class TenantService {
   }
 
   /**
+   * Get a tenant by its ID (alias for getTenant).
+   * 
+   * @param id Tenant ID
+   * @returns Promise with tenant or undefined if not found
+   */
+  async getTenantById(id: number): Promise<Tenant | undefined> {
+    return await this.getTenant(id);
+  }
+
+  /**
    * Get a tenant by its name.
    * 
    * @param name Tenant name

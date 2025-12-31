@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { PocketMQTT } from '../index.js';
 import { getDbClient } from '../core/database.js';
 import { tenant as tenantSchema, user as userSchema } from '../core/db/schema.js';
-import { hashTenantName } from '../core/utils/tenant-utils.js';
+import { generateTenantToken } from '../core/utils/tenant-utils.js';
 
 describe('Tenant API Routes', () => {
   let app: PocketMQTT;
@@ -42,7 +42,7 @@ describe('Tenant API Routes', () => {
   describe('POST /api/v1/tenant', () => {
     it('should create a new tenant with valid token', async () => {
       const tenantName = 'acme-cloud';
-      const token = hashTenantName(tenantName);
+      const token = generateTenantToken(tenantName);
 
       const response = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/tenant`, {
         method: 'POST',
@@ -82,7 +82,7 @@ describe('Tenant API Routes', () => {
 
     it('should reject duplicate tenant name', async () => {
       const tenantName = 'duplicate-tenant';
-      const token = hashTenantName(tenantName);
+      const token = generateTenantToken(tenantName);
 
       // Create first tenant
       const firstResponse = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/tenant`, {
@@ -113,7 +113,7 @@ describe('Tenant API Routes', () => {
 
     it('should reject invalid tenant name format (uppercase)', async () => {
       const tenantName = 'Invalid-Name';
-      const token = hashTenantName(tenantName.toLowerCase());
+      const token = generateTenantToken(tenantName.toLowerCase());
 
       const response = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/tenant`, {
         method: 'POST',
@@ -132,7 +132,7 @@ describe('Tenant API Routes', () => {
 
     it('should reject invalid tenant name format (special characters)', async () => {
       const tenantName = 'test_tenant';
-      const token = hashTenantName(tenantName);
+      const token = generateTenantToken(tenantName);
 
       const response = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/tenant`, {
         method: 'POST',
@@ -151,7 +151,7 @@ describe('Tenant API Routes', () => {
 
     it('should reject tenant name starting with hyphen', async () => {
       const tenantName = '-test-tenant';
-      const token = hashTenantName(tenantName);
+      const token = generateTenantToken(tenantName);
 
       const response = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/tenant`, {
         method: 'POST',
@@ -169,7 +169,7 @@ describe('Tenant API Routes', () => {
 
     it('should reject tenant name ending with hyphen', async () => {
       const tenantName = 'test-tenant-';
-      const token = hashTenantName(tenantName);
+      const token = generateTenantToken(tenantName);
 
       const response = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/tenant`, {
         method: 'POST',
@@ -227,7 +227,7 @@ describe('Tenant API Routes', () => {
     beforeEach(async () => {
       // Create a tenant for user tests
       const tenantName = 'test-tenant';
-      const token = hashTenantName(tenantName);
+      const token = generateTenantToken(tenantName);
 
       const tenantResponse = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/tenant`, {
         method: 'POST',
@@ -304,7 +304,7 @@ describe('Tenant API Routes', () => {
     it('should reject creating users for a different tenant', async () => {
       // Create another tenant
       const otherTenantName = 'other-tenant';
-      const otherToken = hashTenantName(otherTenantName);
+      const otherToken = generateTenantToken(otherTenantName);
       const otherTenantResponse = await fetch(`http://${API_HOST}:${API_PORT}/api/v1/tenant`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
