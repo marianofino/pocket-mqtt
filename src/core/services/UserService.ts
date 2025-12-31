@@ -1,6 +1,9 @@
 import { createUserRepository } from '../repositories/repository.factory.js';
 import type { UserRepository, User, NewUser } from '../repositories/UserRepository.interface.js';
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { randomBytes, timingSafeEqual, scrypt } from 'node:crypto';
+import { promisify } from 'node:util';
+
+const scryptAsync = promisify(scrypt);
 
 /**
  * Service for managing per-tenant admin users.
@@ -36,7 +39,7 @@ export class UserService {
     }
 
     // Hash the password with a random salt
-    const passwordHash = this.hashPassword(data.password);
+    const passwordHash = await this.hashPassword(data.password);
 
     const newUser: NewUser = {
       tenantId: data.tenantId,
@@ -98,10 +101,10 @@ export class UserService {
    * 
    * @param user User to verify
    * @param password Password to verify
-   * @returns True if password matches, false otherwise
+   * @returns Promise resolving to true if password matches, false otherwise
    */
-  verifyPassword(user: User, password: string): boolean {
-    const hash = this.hashPassword(password, this.extractSalt(user.passwordHash));
+  async verifyPassword(user: User, password: string): Promise<boolean> {
+    const hash = await this.hashPassword(password, this.extractSalt(user.passwordHash));
     
     // Use constant-time comparison to prevent timing attacks
     if (hash.length !== user.passwordHash.length) {
@@ -130,22 +133,22 @@ export class UserService {
   }
 
   /**
-   * Hash a password with a salt using SHA-256.
+   * Hash a password with a salt using scrypt.
    * Format: salt$hash
    * 
-   * NOTE: This is a basic implementation for initial multi-tenant support.
-   * For production use, consider migrating to bcrypt, scrypt, or Argon2
-   * which provide better security against timing attacks and brute force.
+   * Uses Node.js built-in scrypt which is designed to be computationally expensive
+   * and memory-hard, providing strong protection against brute force attacks.
    * 
    * @param password Password to hash
    * @param salt Optional salt (generated if not provided)
-   * @returns Hashed password with salt
+   * @returns Promise resolving to hashed password with salt
    */
-  private hashPassword(password: string, salt?: string): string {
+  private async hashPassword(password: string, salt?: string): Promise<string> {
     const actualSalt = salt ?? randomBytes(16).toString('hex');
-    const hash = createHash('sha256')
-      .update(actualSalt + password)
-      .digest('hex');
+    // Use scrypt with N=16384, r=8, p=1 (recommended parameters)
+    // keylen=64 produces a 64-byte derived key
+    const derivedKey = await scryptAsync(password, actualSalt, 64) as Buffer;
+    const hash = derivedKey.toString('hex');
     return `${actualSalt}$${hash}`;
   }
 
