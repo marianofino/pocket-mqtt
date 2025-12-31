@@ -139,14 +139,20 @@ export class UserService {
    * Uses Node.js built-in scrypt which is designed to be computationally expensive
    * and memory-hard, providing strong protection against brute force attacks.
    * 
+   * Node.js scrypt uses hardcoded parameters: N=16384, r=8, p=1
+   * These are secure defaults balancing security and performance.
+   * 
    * @param password Password to hash
    * @param salt Optional salt (generated if not provided)
    * @returns Promise resolving to hashed password with salt
    */
   private async hashPassword(password: string, salt?: string): Promise<string> {
     const actualSalt = salt ?? randomBytes(16).toString('hex');
-    // Use scrypt with N=16384, r=8, p=1 (recommended parameters)
-    // keylen=64 produces a 64-byte derived key
+    // Use scrypt with Node.js default parameters:
+    // - N=16384 (CPU/memory cost parameter, 2^14) - hardcoded by Node.js
+    // - r=8 (block size parameter) - hardcoded by Node.js
+    // - p=1 (parallelization parameter) - hardcoded by Node.js
+    // - keylen=64 (produces a 64-byte derived key)
     const derivedKey = await scryptAsync(password, actualSalt, 64) as Buffer;
     const hash = derivedKey.toString('hex');
     return `${actualSalt}$${hash}`;
