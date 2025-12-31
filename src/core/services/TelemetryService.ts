@@ -54,7 +54,7 @@ export class TelemetryService {
       throw new Error('TelemetryService is stopped');
     }
 
-    if (!tenantId || typeof tenantId !== 'number' || tenantId < 1) {
+    if (typeof tenantId !== 'number' || tenantId < 1) {
       throw new Error('tenantId is required and must be a positive number');
     }
 

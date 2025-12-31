@@ -61,7 +61,7 @@ export async function telemetryRoutes(
       }
     } else {
       // JWT user - tenantId must be provided in body
-      if (!tenantId || typeof tenantId !== 'number' || tenantId < 1) {
+      if (typeof tenantId !== 'number' || tenantId < 1) {
         return reply.code(400).send({ 
           error: 'tenantId is required in request body and must be a positive integer'
         });
