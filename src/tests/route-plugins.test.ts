@@ -1,11 +1,12 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { PocketMQTT } from '../index.js';
 import { getDbClient } from '../core/database.js';
-import { deviceToken as deviceTokenSchema, tenant as tenantSchema } from '../core/db/schema.js';
+import { deviceToken as deviceTokenSchema, tenant as tenantSchema, telemetry as telemetrySchema, user as userSchema } from '../core/db/schema.js';
 
 describe('Route Plugin Integration', () => {
   let app: PocketMQTT;
-  let db: ReturnType<typeof getDbClient>;
+  // Use a loose type here to avoid adapter-specific union overload issues in tests
+  let db: any;
   let defaultTenantId: number;
   const MQTT_PORT = 1890;
   const API_PORT = 3010;
@@ -17,8 +18,10 @@ describe('Route Plugin Integration', () => {
     db = getDbClient();
     
     // Clean up and create test data
-    await db.delete(deviceTokenSchema);
-    await db.delete(tenantSchema);
+  await db.delete(telemetrySchema);
+  await db.delete(deviceTokenSchema);
+  await db.delete(userSchema);
+  await db.delete(tenantSchema);
     
     // Create a default tenant
     const tenantResult = await db.insert(tenantSchema).values({
@@ -45,9 +48,15 @@ describe('Route Plugin Integration', () => {
   });
 
   afterAll(async () => {
-    await db.delete(deviceTokenSchema);
-    await db.delete(tenantSchema);
+    // Stop the app first so TelemetryService can flush with the tenant still present
     await app.stop();
+
+    // Recreate a DB client after disconnect to clean test data
+    db = getDbClient();
+    await db.delete(telemetrySchema);
+    await db.delete(deviceTokenSchema);
+    await db.delete(userSchema);
+    await db.delete(tenantSchema);
   });
 
   describe('Health Route Plugin', () => {
