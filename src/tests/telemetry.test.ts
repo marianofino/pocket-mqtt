@@ -14,8 +14,9 @@ describe('TelemetryService', () => {
     await db.delete(telemetrySchema);
     await db.delete(tenantSchema);
     
-    // Create a default tenant (ID=1) for telemetry messages
+    // Create a default tenant with ID=1 for DEFAULT_TENANT_ID compatibility
     await db.insert(tenantSchema).values({
+      id: 1,
       name: 'default-tenant',
       apiKey: 'default-api-key-for-testing',
     });
