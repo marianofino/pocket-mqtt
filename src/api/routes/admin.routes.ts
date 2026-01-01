@@ -2,9 +2,9 @@ import type { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyRepl
 import fastifyStatic from '@fastify/static';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { validateAdminCredentials } from '../../core/utils/admin-auth.js';
+import { ensureAdminStaticAssets } from './admin-static.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,45 +19,28 @@ export async function adminRoutes(
 ): Promise<void> {
   const adminDistPath = path.join(__dirname, '../../../dist/public/admin');
   
-  // Check if admin dashboard is built
-  if (!existsSync(adminDistPath)) {
-    fastify.log.warn('Admin dashboard not built. Run `npm run build:dashboard` to build it.');
-    
-    // Serve a placeholder message if dashboard is not built
-    fastify.get('/admin/*', async (_request: FastifyRequest, reply: FastifyReply) => {
-      reply.type('text/html').send(`
-        <!DOCTYPE html>
-        <html>
-          <head><title>PocketMQTT Admin</title></head>
-          <body style="font-family: system-ui; padding: 2rem; text-align: center;">
-            <h1>Admin Dashboard Not Built</h1>
-            <p>Please run <code>npm run build:dashboard</code> to build the admin dashboard.</p>
-          </body>
-        </html>
-      `);
-    });
-  } else {
-    // Register static file serving for admin dashboard SPA
-    // Use wildcard:false to prevent automatic wildcard route, then add custom fallback
-    await fastify.register(fastifyStatic, {
-      root: adminDistPath,
-      prefix: '/admin/',
-      decorateReply: false,
-      wildcard: false,
-    });
+  await ensureAdminStaticAssets(adminDistPath, fastify.log);
+  
+  // Register static file serving for admin dashboard SPA
+  // Use wildcard:false to prevent automatic wildcard route, then add custom fallback
+  await fastify.register(fastifyStatic, {
+    root: adminDistPath,
+    prefix: '/admin/',
+    decorateReply: false,
+    wildcard: false,
+  });
 
-    // SPA fallback - serve index.html for all /admin/* routes that don't match static files
-    // Using setNotFoundHandler scoped to /admin prefix
-    fastify.setNotFoundHandler(async (request: FastifyRequest, reply: FastifyReply) => {
-      if (request.url.startsWith('/admin/') || request.url === '/admin') {
-        const indexPath = path.join(adminDistPath, 'index.html');
-        const content = await readFile(indexPath, 'utf-8');
-        reply.type('text/html').send(content);
-      } else {
-        reply.code(404).send({ error: 'Not Found' });
-      }
-    });
-  }
+  // SPA fallback - serve index.html for all /admin/* routes that don't match static files
+  // Using setNotFoundHandler scoped to /admin prefix
+  fastify.setNotFoundHandler(async (request: FastifyRequest, reply: FastifyReply) => {
+    if (request.url.startsWith('/admin/') || request.url === '/admin') {
+      const indexPath = path.join(adminDistPath, 'index.html');
+      const content = await readFile(indexPath, 'utf-8');
+      reply.type('text/html').send(content);
+    } else {
+      reply.code(404).send({ error: 'Not Found' });
+    }
+  });
 
   /**
    * Admin login endpoint - generates JWT tokens for admin users
