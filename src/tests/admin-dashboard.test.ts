@@ -54,9 +54,9 @@ describe('Admin Dashboard Routes', () => {
       expect(response.headers.get('content-type')).toContain('text/html');
       
       const html = await response.text();
-      expect(html).toContain('PocketMQTT');
-      expect(html).toContain('Admin Dashboard');
-      expect(html).toContain('login-form');
+      // SPA serves the index.html which contains the root div and main.js
+      expect(html).toContain('PocketMQTT Admin');
+      expect(html).toContain('id="root"');
     });
   });
 
@@ -68,16 +68,17 @@ describe('Admin Dashboard Routes', () => {
       
       const html = await response.text();
       expect(html).toContain('PocketMQTT Admin');
-      expect(html).toContain('Coming Soon');
+      expect(html).toContain('id="root"');
     });
 
-    it('should serve homepage at /admin/index.html', async () => {
-      const response = await fetch(`http://${API_HOST}:${API_PORT}/admin/index.html`);
+    it('should serve SPA fallback for nested routes', async () => {
+      const response = await fetch(`http://${API_HOST}:${API_PORT}/admin/some-nested-route`);
       expect(response.ok).toBe(true);
       expect(response.headers.get('content-type')).toContain('text/html');
       
       const html = await response.text();
-      expect(html).toContain('Welcome to PocketMQTT Admin Dashboard');
+      expect(html).toContain('PocketMQTT Admin');
+      expect(html).toContain('id="root"');
     });
   });
 
