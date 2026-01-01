@@ -8,6 +8,7 @@ import { authRoutes } from './auth.routes.js';
 import { telemetryRoutes } from './telemetry.routes.js';
 import { deviceRoutes } from './device.routes.js';
 import { tenantRoutes } from './tenant.routes.js';
+import { adminRoutes } from './admin.routes.js';
 
 /**
  * Options for registering all routes
@@ -36,6 +37,9 @@ export async function registerRoutes(
   
   // Register authentication routes (public)
   await fastify.register(authRoutes);
+  
+  // Register admin dashboard routes (public - handles own auth)
+  await fastify.register(adminRoutes);
   
   // Register tenant routes (public for tenant creation)
   await fastify.register(tenantRoutes, {

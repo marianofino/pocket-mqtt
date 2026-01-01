@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PocketMQTT - Admin Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f8fafc;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: white;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .header h1 {
+      color: #667eea;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .user-name {
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    .logout-btn {
+      padding: 8px 16px;
+      background: #f1f5f9;
+      color: #64748b;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .logout-btn:hover {
+      background: #e2e8f0;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 0 24px;
+    }
+
+    .welcome-card {
+      background: white;
+      border-radius: 12px;
+      padding: 60px 40px;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .welcome-card h2 {
+      color: #1e293b;
+      font-size: 32px;
+      margin-bottom: 16px;
+    }
+
+    .welcome-card p {
+      color: #64748b;
+      font-size: 18px;
+      margin-bottom: 32px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 8px 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 24px;
+      margin-top: 40px;
+    }
+
+    .feature-card {
+      background: white;
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .feature-card h3 {
+      color: #1e293b;
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    .feature-card p {
+      color: #64748b;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .coming-soon {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 4px 12px;
+      background: #fef3c7;
+      color: #92400e;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>PocketMQTT Admin</h1>
+    <div class="user-info">
+      <span class="user-name" id="user-name">Admin</span>
+      <button class="logout-btn" id="logout-btn">Logout</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="welcome-card">
+      <h2>Welcome to PocketMQTT Admin Dashboard</h2>
+      <p>Your lightweight IoT platform control center</p>
+      <span class="badge">Coming Soon</span>
+    </div>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <h3>Device Management</h3>
+        <p>Monitor and manage your IoT devices, view status, and configure settings.</p>
+        <span class="coming-soon">Coming Soon</span>
+      </div>
+
+      <div class="feature-card">
+        <h3>Telemetry Data</h3>
+        <p>Visualize real-time telemetry data with charts and analytics.</p>
+        <span class="coming-soon">Coming Soon</span>
+      </div>
+
+      <div class="feature-card">
+        <h3>API Management</h3>
+        <p>Configure API endpoints, manage access keys, and monitor usage.</p>
+        <span class="coming-soon">Coming Soon</span>
+      </div>
+
+      <div class="feature-card">
+        <h3>System Settings</h3>
+        <p>Configure system settings, user management, and security options.</p>
+        <span class="coming-soon">Coming Soon</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Check authentication on page load
+    const token = localStorage.getItem('jwt_token');
+    
+    if (!token) {
+      // Redirect to login if no token
+      window.location.href = '/admin/login';
+    } else {
+      // Try to decode username from JWT (basic parsing, not secure validation)
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.username) {
+          document.getElementById('user-name').textContent = payload.username;
+        }
+      } catch (e) {
+        // If token is invalid, redirect to login
+        localStorage.removeItem('jwt_token');
+        window.location.href = '/admin/login';
+      }
+    }
+
+    // Logout functionality
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      localStorage.removeItem('jwt_token');
+      window.location.href = '/admin/login';
+    });
+  </script>
+</body>
+</html>
