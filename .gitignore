@@ -9,3 +9,7 @@ coverage/
 *.db-journal
 *.db-wal
 *.db-shm
+
+# Dashboard
+src/services/dashboard/node_modules/
+src/services/dashboard/dist/

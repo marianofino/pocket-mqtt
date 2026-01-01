@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
+import { validateAdminCredentials } from '../../core/utils/admin-auth.js';
 
 /**
  * Authentication route plugin
@@ -31,10 +32,7 @@ export async function authRoutes(
     
     // Demo authentication - In production, use proper user management with hashed passwords
     // Configure via environment variables: ADMIN_USERNAME and ADMIN_PASSWORD
-    const adminUsername = process.env.ADMIN_USERNAME || 'admin';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
-    
-    if (username === adminUsername && password === adminPassword) {
+    if (validateAdminCredentials(username, password)) {
       const token = fastify.jwt.sign({ username }, { expiresIn: '1h' });
       return { token };
     }
