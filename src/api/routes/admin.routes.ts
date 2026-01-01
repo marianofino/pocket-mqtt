@@ -3,6 +3,7 @@ import fastifyStatic from '@fastify/static';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFile } from 'node:fs/promises';
+import { validateAdminCredentials } from '../../core/utils/admin-auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -54,10 +55,7 @@ export async function adminRoutes(
     
     // Demo authentication - In production, use proper user management with hashed passwords
     // Configure via environment variables: ADMIN_USERNAME and ADMIN_PASSWORD
-    const adminUsername = process.env.ADMIN_USERNAME || 'admin';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
-    
-    if (username === adminUsername && password === adminPassword) {
+    if (validateAdminCredentials(username, password)) {
       const token = fastify.jwt.sign({ username }, { expiresIn: '1h' });
       return { token };
     }

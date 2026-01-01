@@ -184,14 +184,24 @@
       // Redirect to login if no token
       window.location.href = '/admin/login';
     } else {
-      // Try to decode username from JWT (basic parsing, not secure validation)
+      // Try to decode and validate JWT token
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
+        
+        // Check if token is expired
+        if (payload.exp && payload.exp * 1000 < Date.now()) {
+          // Token expired, clear and redirect to login
+          localStorage.removeItem('jwt_token');
+          window.location.href = '/admin/login';
+          throw new Error('Token expired');
+        }
+        
+        // Display username if available
         if (payload.username) {
           document.getElementById('user-name').textContent = payload.username;
         }
       } catch (e) {
-        // If token is invalid, redirect to login
+        // If token is invalid or expired, redirect to login
         localStorage.removeItem('jwt_token');
         window.location.href = '/admin/login';
       }
