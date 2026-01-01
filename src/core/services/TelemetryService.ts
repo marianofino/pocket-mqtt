@@ -2,6 +2,7 @@ import { createMessageRepository } from '../repositories/repository.factory.js';
 import type { MessageRepository } from '../repositories/MessageRepository.interface.js';
 
 interface TelemetryMessage {
+  tenantId: number;
   topic: string;
   payload: string;
   timestamp: Date;
@@ -43,13 +44,22 @@ export class TelemetryService {
   /**
    * Add a message to the buffer.
    * If buffer reaches max size, flush immediately.
+   * 
+   * @param topic MQTT topic
+   * @param payload Message payload
+   * @param tenantId Required tenant ID
    */
-  async addMessage(topic: string, payload: string): Promise<void> {
+  async addMessage(topic: string, payload: string, tenantId: number): Promise<void> {
     if (!this.isRunning) {
       throw new Error('TelemetryService is stopped');
     }
 
+    if (typeof tenantId !== 'number' || tenantId < 1) {
+      throw new Error('tenantId is required and must be a positive number');
+    }
+
     const message: TelemetryMessage = {
+      tenantId,
       topic,
       payload,
       timestamp: new Date(),
@@ -85,6 +95,7 @@ export class TelemetryService {
       // Batch insert all messages using repository
       await this.repository.insertBatch(
         messagesToFlush.map(msg => ({
+          tenantId: msg.tenantId,
           topic: msg.topic,
           payload: msg.payload,
           timestamp: msg.timestamp,

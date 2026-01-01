@@ -3,6 +3,8 @@ import fastifyJwt from '@fastify/jwt';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { TelemetryService } from '../core/services/TelemetryService.js';
 import type { DeviceService } from '../core/services/DeviceService.js';
+import type { TenantService } from '../core/services/TenantService.js';
+import type { UserService } from '../core/services/UserService.js';
 import { registerRoutes } from './routes/index.js';
 
 export interface APIServerConfig {
@@ -26,6 +28,8 @@ export class APIServer {
   constructor(
     private telemetryService: TelemetryService,
     private deviceService: DeviceService,
+    private tenantService: TenantService,
+    private userService: UserService,
     config: APIServerConfig = {}
   ) {
     this.port = config.port ?? 3000;
@@ -71,15 +75,83 @@ export class APIServer {
   }
 
   /**
-   * Setup JWT authentication plugin and decorator.
+   * Setup authentication plugins and decorators.
    */
   private setupJWT(): void {
-    // Register JWT plugin
+    // Register JWT plugin for dashboard/admin users
     this.fastify.register(fastifyJwt, {
       secret: this.jwtSecret
     });
 
-    // Add authentication decorator
+    /**
+     * Flexible authentication decorator that supports both:
+     * - JWT tokens (for dashboard users) via Authorization: Bearer <jwt>
+     * - Tenant API keys (for external systems) via X-API-Key: <apiKey>
+     * 
+     * Tries JWT first, then falls back to X-API-Key header.
+     * Ensures per-tenant scoping for proper isolation.
+     * 
+     * JWT-authenticated users can have tenant context attached if tenantId is in the JWT claims.
+     * API key users are automatically scoped to their tenant via request.tenant.
+     */
+    this.fastify.decorate('authenticateFlexible', async (request: FastifyRequest, reply: FastifyReply) => {
+      // First, try JWT authentication (for dashboard users via Authorization header)
+      const authHeader = request.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        try {
+          await request.jwtVerify();
+          
+          // Extract tenant from JWT claims if present
+          const payload = request.user as { tenantId?: number; userId?: number; username?: string };
+          if (payload.tenantId) {
+            // Load tenant from database to attach full tenant object
+            const tenant = await this.tenantService.getTenantById(payload.tenantId);
+            if (tenant) {
+              request.tenant = tenant;
+            }
+          }
+          
+          // JWT authentication successful
+          return;
+        } catch (jwtError) {
+          // JWT verification failed, return error since Bearer token was provided but invalid
+          return reply.code(401).send({ 
+            error: 'Unauthorized',
+            message: 'Invalid JWT token'
+          });
+        }
+      }
+
+      // Try X-API-Key header authentication (for external systems)
+      const apiKeyHeader = request.headers['x-api-key'];
+      if (!apiKeyHeader || typeof apiKeyHeader !== 'string') {
+        return reply.code(401).send({ 
+          error: 'Unauthorized',
+          message: 'Valid JWT token (Authorization: Bearer) or API key (X-API-Key) required'
+        });
+      }
+
+      const apiKey = apiKeyHeader.trim();
+      if (apiKey.length === 0) {
+        return reply.code(401).send({ error: 'Invalid API key' });
+      }
+
+      // Validate as tenant API key
+      try {
+        const tenant = await this.tenantService.getTenantByApiKey(apiKey);
+        if (!tenant) {
+          return reply.code(401).send({ error: 'Invalid API key' });
+        }
+
+        // Attach tenant info to request for per-tenant scoping
+        request.tenant = tenant;
+      } catch (err) {
+        this.fastify.log.error({ err }, 'Error during authentication');
+        return reply.code(401).send({ error: 'Unauthorized' });
+      }
+    });
+
+    // Legacy JWT-only decorator (kept for backward compatibility)
     this.fastify.decorate('authenticate', async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         await request.jwtVerify();
@@ -97,6 +169,8 @@ export class APIServer {
     this.fastify.register(registerRoutes, {
       telemetryService: this.telemetryService,
       deviceService: this.deviceService,
+      tenantService: this.tenantService,
+      userService: this.userService,
       maxPayloadSize: this.maxPayloadSize
     });
   }

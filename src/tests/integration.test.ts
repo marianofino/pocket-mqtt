@@ -11,12 +11,23 @@ describe('PocketMQTT Integration Tests', () => {
 
   beforeAll(async () => {
     const { getDbClient } = await import('../core/database.js');
-    const { deviceToken } = await import('../core/db/schema.js');
+    const { deviceToken, tenant } = await import('../core/db/schema.js');
     const db = getDbClient();
     
-    // Clean up and create test device token
+    // Clean up and create test data
     await db.delete(deviceToken);
+    await db.delete(tenant);
+    
+    // Create a default tenant
+    const tenantResult = await db.insert(tenant).values({
+      name: 'default-tenant',
+      apiKey: 'default-api-key-for-testing',
+    }).returning();
+    const defaultTenantId = tenantResult[0].id;
+    
+    // Create test device token
     await db.insert(deviceToken).values({
+      tenantId: defaultTenantId,
       deviceId: testDeviceId,
       token: testDeviceToken,
       name: 'Integration Test Device'
@@ -32,9 +43,10 @@ describe('PocketMQTT Integration Tests', () => {
 
   afterAll(async () => {
     const { getDbClient } = await import('../core/database.js');
-    const { deviceToken } = await import('../core/db/schema.js');
+    const { deviceToken, tenant } = await import('../core/db/schema.js');
     const db = getDbClient();
     await db.delete(deviceToken);
+    await db.delete(tenant);
     await app.stop();
   });
 

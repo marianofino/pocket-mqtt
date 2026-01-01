@@ -1,5 +1,7 @@
 import { TelemetryService } from './core/services/TelemetryService.js';
 import { DeviceService } from './core/services/DeviceService.js';
+import { TenantService } from './core/services/TenantService.js';
+import { UserService } from './core/services/UserService.js';
 import { disconnectDb } from './core/database.js';
 import { MQTTServer } from './broker/mqtt-server.js';
 import { APIServer } from './api/server.js';
@@ -18,13 +20,15 @@ export interface PocketMQTTConfig {
  * This is the main entry point that coordinates:
  * - API Server (Fastify + REST endpoints)
  * - Broker Server (Aedes + MQTT protocol)
- * - Core Services (TelemetryService, DeviceService)
+ * - Core Services (TelemetryService, DeviceService, TenantService, UserService)
  */
 export class PocketMQTT {
   private mqttServer: MQTTServer;
   private apiServer: APIServer;
   private telemetryService: TelemetryService;
   private deviceService: DeviceService;
+  private tenantService: TenantService;
+  private userService: UserService;
 
   constructor(config: PocketMQTTConfig = {}) {
     const maxPayloadSize = 64 * 1024; // 64KB max payload size
@@ -32,11 +36,15 @@ export class PocketMQTT {
     // Initialize core services
     this.telemetryService = new TelemetryService();
     this.deviceService = new DeviceService();
+    this.tenantService = new TenantService();
+    this.userService = new UserService();
     
     // Initialize API server with the concrete services
     this.apiServer = new APIServer(
       this.telemetryService,
       this.deviceService,
+      this.tenantService,
+      this.userService,
       {
         port: config.apiPort,
         host: config.apiHost,
@@ -45,10 +53,11 @@ export class PocketMQTT {
       }
     );
 
-    // Attach Fastify logger to the DeviceService.
+    // Attach Fastify logger to the services.
     // Note: The logger is available immediately after Fastify construction,
     // before plugins are registered. This is safe and intentional.
     this.deviceService.setLogger(this.apiServer.getLogger());
+    this.tenantService.setLogger(this.apiServer.getLogger());
     
     // Initialize MQTT server
     this.mqttServer = new MQTTServer(this.telemetryService, {

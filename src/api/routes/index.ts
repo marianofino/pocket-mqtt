@@ -1,10 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import type { TelemetryService } from '../../core/services/TelemetryService.js';
 import type { DeviceService } from '../../core/services/DeviceService.js';
+import type { TenantService } from '../../core/services/TenantService.js';
+import type { UserService } from '../../core/services/UserService.js';
 import { healthRoutes } from './health.routes.js';
 import { authRoutes } from './auth.routes.js';
 import { telemetryRoutes } from './telemetry.routes.js';
 import { deviceRoutes } from './device.routes.js';
+import { tenantRoutes } from './tenant.routes.js';
 
 /**
  * Options for registering all routes
@@ -12,6 +15,8 @@ import { deviceRoutes } from './device.routes.js';
 export interface RegisterRoutesOptions {
   telemetryService: TelemetryService;
   deviceService: DeviceService;
+  tenantService: TenantService;
+  userService: UserService;
   maxPayloadSize: number;
 }
 
@@ -31,6 +36,12 @@ export async function registerRoutes(
   
   // Register authentication routes (public)
   await fastify.register(authRoutes);
+  
+  // Register tenant routes (public for tenant creation)
+  await fastify.register(tenantRoutes, {
+    tenantService: options.tenantService,
+    userService: options.userService
+  });
   
   // Register telemetry routes (protected)
   await fastify.register(telemetryRoutes, {

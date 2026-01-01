@@ -32,10 +32,11 @@ export class DeviceService {
   /**
    * Create a new device with auto-generated token.
    * 
-   * @param data Device data (name required, labels and notes optional)
+   * @param data Device data (tenantId and name required, labels and notes optional)
    * @returns Promise with created device including generated token
    */
   async createDevice(data: {
+    tenantId: number;
     name: string;
     labels?: string[];
     notes?: string;
@@ -49,6 +50,7 @@ export class DeviceService {
     const labelsJson = data.labels ? JSON.stringify(data.labels) : null;
 
     const newDevice: NewDevice = {
+      tenantId: data.tenantId,
       deviceId,
       token,
       name: data.name,

@@ -16,7 +16,7 @@ export function setupMQTTHandlers(
   maxPayloadSize = 64 * 1024
 ): void {
   // Listen to published messages and buffer them for telemetry
-  aedes.on('publish', (packet, _client) => {
+  aedes.on('publish', (packet, client) => {
     // Skip system topics (starting with $)
     if (packet.topic.startsWith('$')) {
       return;
@@ -42,10 +42,18 @@ export function setupMQTTHandlers(
       return;
     }
     
+    // Get tenantId from authenticated client
+    const tenantId = (client as any)?.tenantId;
+    if (!tenantId) {
+      console.error(`Rejected MQTT message on topic ${packet.topic}: no tenant context available`);
+      return;
+    }
+    
     // Buffer the message for batch writing (fire and forget for performance)
     telemetryService.addMessage(
       packet.topic,
-      payloadString
+      payloadString,
+      tenantId
     ).catch(err => {
       // Log errors but don't block MQTT message flow
       console.error('Error buffering telemetry message:', err);

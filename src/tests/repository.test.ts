@@ -2,15 +2,28 @@ import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from
 import { createMessageRepository } from '../core/repositories/repository.factory.js';
 import type { MessageRepository } from '../core/repositories/MessageRepository.interface.js';
 import { getDbClient, disconnectDb, getDbAdapter } from '../core/database.js';
+import { tenant as tenantSchema } from '../core/db/schema.js';
 
 describe('Repository Pattern', () => {
   let repository: MessageRepository;
+  let db: ReturnType<typeof getDbClient>;
+  let defaultTenantId: number;
 
   beforeAll(async () => {
     // Ensure we start with a clean database
-    await getDbClient();
+    db = getDbClient();
     const repo = createMessageRepository();
     await repo.deleteAll();
+    
+    // Clean up tenants
+    await db.delete(tenantSchema);
+    
+    // Create a default tenant for tests
+    const tenantResult = await db.insert(tenantSchema).values({
+      name: 'test-tenant',
+      apiKey: 'test-api-key-for-repository-tests',
+    }).returning();
+    defaultTenantId = tenantResult[0].id;
   });
 
   beforeEach(async () => {
@@ -23,6 +36,7 @@ describe('Repository Pattern', () => {
   });
 
   afterAll(async () => {
+    await db.delete(tenantSchema);
     await disconnectDb();
   });
 
@@ -34,9 +48,9 @@ describe('Repository Pattern', () => {
   describe('insertBatch', () => {
     it('should insert multiple messages in a batch', async () => {
       const messages = [
-        { topic: 'test/topic1', payload: 'payload1', timestamp: new Date() },
-        { topic: 'test/topic2', payload: 'payload2', timestamp: new Date() },
-        { topic: 'test/topic3', payload: 'payload3', timestamp: new Date() },
+        { tenantId: defaultTenantId, topic: 'test/topic1', payload: 'payload1', timestamp: new Date() },
+        { tenantId: defaultTenantId, topic: 'test/topic2', payload: 'payload2', timestamp: new Date() },
+        { tenantId: defaultTenantId, topic: 'test/topic3', payload: 'payload3', timestamp: new Date() },
       ];
 
       await repository.insertBatch(messages);
@@ -58,10 +72,10 @@ describe('Repository Pattern', () => {
       // Insert test data with timestamps relative to "now" to test ordering
       const baseTime = Date.now();
       await repository.insertBatch([
-        { topic: 'sensor/temp', payload: '{"temp": 20}', timestamp: new Date(baseTime - 3 * 60 * 60 * 1000) }, // 3 hours ago
-        { topic: 'sensor/temp', payload: '{"temp": 21}', timestamp: new Date(baseTime - 2 * 60 * 60 * 1000) }, // 2 hours ago
-        { topic: 'sensor/humidity', payload: '{"humidity": 60}', timestamp: new Date(baseTime - 1 * 60 * 60 * 1000) }, // 1 hour ago
-        { topic: 'sensor/temp', payload: '{"temp": 22}', timestamp: new Date(baseTime) }, // now
+        { tenantId: defaultTenantId, topic: 'sensor/temp', payload: '{"temp": 20}', timestamp: new Date(baseTime - 3 * 60 * 60 * 1000) }, // 3 hours ago
+        { tenantId: defaultTenantId, topic: 'sensor/temp', payload: '{"temp": 21}', timestamp: new Date(baseTime - 2 * 60 * 60 * 1000) }, // 2 hours ago
+        { tenantId: defaultTenantId, topic: 'sensor/humidity', payload: '{"humidity": 60}', timestamp: new Date(baseTime - 1 * 60 * 60 * 1000) }, // 1 hour ago
+        { tenantId: defaultTenantId, topic: 'sensor/temp', payload: '{"temp": 22}', timestamp: new Date(baseTime) }, // now
       ]);
     });
 
@@ -102,9 +116,9 @@ describe('Repository Pattern', () => {
   describe('count', () => {
     beforeEach(async () => {
       await repository.insertBatch([
-        { topic: 'sensor/temp', payload: '{"temp": 20}', timestamp: new Date() },
-        { topic: 'sensor/temp', payload: '{"temp": 21}', timestamp: new Date() },
-        { topic: 'sensor/humidity', payload: '{"humidity": 60}', timestamp: new Date() },
+        { tenantId: defaultTenantId, topic: 'sensor/temp', payload: '{"temp": 20}', timestamp: new Date() },
+        { tenantId: defaultTenantId, topic: 'sensor/temp', payload: '{"temp": 21}', timestamp: new Date() },
+        { tenantId: defaultTenantId, topic: 'sensor/humidity', payload: '{"humidity": 60}', timestamp: new Date() },
       ]);
     });
 
@@ -127,7 +141,7 @@ describe('Repository Pattern', () => {
   describe('deleteAll', () => {
     it('should delete all messages', async () => {
       await repository.insertBatch([
-        { topic: 'test/topic', payload: 'payload', timestamp: new Date() },
+        { tenantId: defaultTenantId, topic: 'test/topic', payload: 'payload', timestamp: new Date() },
       ]);
 
       let count = await repository.count();

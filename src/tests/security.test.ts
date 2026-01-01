@@ -3,12 +3,13 @@ import { connect } from 'mqtt';
 import type { MqttClient } from 'mqtt';
 import { PocketMQTT } from '../index.js';
 import { getDbClient } from '../core/database.js';
-import { telemetry as telemetrySchema, deviceToken as deviceTokenSchema } from '../core/db/schema.js';
+import { telemetry as telemetrySchema, deviceToken as deviceTokenSchema, tenant as tenantSchema } from '../core/db/schema.js';
 import { eq } from 'drizzle-orm';
 
 describe('MQTT Security - Device Token Authentication', () => {
   let app: PocketMQTT;
   let db: ReturnType<typeof getDbClient>;
+  let defaultTenantId: number;
   const MQTT_PORT = 1886;
   const API_PORT = 3003;
 
@@ -18,6 +19,15 @@ describe('MQTT Security - Device Token Authentication', () => {
     // Clean up any existing data
     await db.delete(deviceTokenSchema);
     await db.delete(telemetrySchema);
+    await db.delete(tenantSchema);
+    
+    // Create a default tenant with ID=1 for DEFAULT_TENANT_ID compatibility
+    const tenantResult = await db.insert(tenantSchema).values({
+      id: 1,
+      name: 'security-test-tenant',
+      apiKey: 'security-test-api-key',
+    }).returning();
+    defaultTenantId = tenantResult[0].id;
     
     // Initialize PocketMQTT with security enabled
     app = new PocketMQTT({
@@ -37,6 +47,7 @@ describe('MQTT Security - Device Token Authentication', () => {
     // Clean up data before stopping
     await db.delete(deviceTokenSchema);
     await db.delete(telemetrySchema);
+    await db.delete(tenantSchema);
     
     // Stop the app
     await app.stop();
@@ -116,6 +127,7 @@ describe('MQTT Security - Device Token Authentication', () => {
     const validToken = 'valid-device-token-abc123';
     
     await db.insert(deviceTokenSchema).values({
+      tenantId: defaultTenantId,
       deviceId,
       token: validToken,
       name: 'Test Sensor 001',
@@ -173,6 +185,7 @@ describe('MQTT Security - Device Token Authentication', () => {
     const expiredToken = 'expired-token-xyz789';
     
     await db.insert(deviceTokenSchema).values({
+      tenantId: defaultTenantId,
       deviceId,
       token: expiredToken,
       name: 'Test Sensor 002',
@@ -212,6 +225,7 @@ describe('MQTT Security - Device Token Authentication', () => {
 describe('REST API Security - JWT Authentication', () => {
   let app: PocketMQTT;
   let db: ReturnType<typeof getDbClient>;
+  let defaultTenantId: number;
   const MQTT_PORT = 1887;
   const API_PORT = 3004;
 
@@ -220,6 +234,15 @@ describe('REST API Security - JWT Authentication', () => {
     
     // Clean up any existing data
     await db.delete(telemetrySchema);
+    await db.delete(tenantSchema);
+    
+    // Create a default tenant with ID=1
+    const tenantResult = await db.insert(tenantSchema).values({
+      id: 1,
+      name: 'security-jwt-test-tenant',
+      apiKey: 'security-jwt-test-api-key',
+    }).returning();
+    defaultTenantId = tenantResult[0].id;
     
     // Initialize PocketMQTT
     app = new PocketMQTT({
@@ -237,6 +260,7 @@ describe('REST API Security - JWT Authentication', () => {
   afterAll(async () => {
     // Clean up data before stopping
     await db.delete(telemetrySchema);
+    await db.delete(tenantSchema);
     
     // Stop the app
     await app.stop();
@@ -327,7 +351,8 @@ describe('REST API Security - JWT Authentication', () => {
       },
       body: JSON.stringify({
         topic: 'api/secure/topic',
-        payload: 'secure payload'
+        payload: 'secure payload',
+        tenantId: defaultTenantId
       })
     });
 

@@ -2,12 +2,13 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { connect } from 'mqtt';
 import { PocketMQTT } from '../index.js';
 import { getDbClient } from '../core/database.js';
-import { telemetry as telemetrySchema, deviceToken as deviceTokenSchema } from '../core/db/schema.js';
+import { telemetry as telemetrySchema, deviceToken as deviceTokenSchema, tenant as tenantSchema } from '../core/db/schema.js';
 import { count, asc, eq } from 'drizzle-orm';
 
 describe('MQTT Telemetry Integration Tests', () => {
   let app: PocketMQTT;
   let db: ReturnType<typeof getDbClient>;
+  let defaultTenantId: number;
   const MQTT_PORT = 1884;
   const API_PORT = 3001;
   const testDeviceId = 'test-device';
@@ -19,9 +20,19 @@ describe('MQTT Telemetry Integration Tests', () => {
     // Clean up any existing data
     await db.delete(deviceTokenSchema);
     await db.delete(telemetrySchema);
+    await db.delete(tenantSchema);
+    
+    // Create a default tenant with ID=1 for DEFAULT_TENANT_ID compatibility
+    const tenantResult = await db.insert(tenantSchema).values({
+      id: 1,
+      name: 'default-tenant',
+      apiKey: 'default-api-key-for-testing',
+    }).returning();
+    defaultTenantId = tenantResult[0].id;
     
     // Create a test device token
     await db.insert(deviceTokenSchema).values({
+      tenantId: defaultTenantId,
       deviceId: testDeviceId,
       token: testDeviceToken,
       name: 'Test MQTT Device'
@@ -44,6 +55,7 @@ describe('MQTT Telemetry Integration Tests', () => {
     // Clean up data before stopping
     await db.delete(deviceTokenSchema);
     await db.delete(telemetrySchema);
+    await db.delete(tenantSchema);
     
     // Now stop the app (which will disconnect database)
     await app.stop();
@@ -160,6 +172,7 @@ describe('MQTT Telemetry Integration Tests', () => {
 describe('Telemetry API Endpoints', () => {
   let app: PocketMQTT;
   let db: ReturnType<typeof getDbClient>;
+  let defaultTenantId: number;
   const MQTT_PORT = 1885;
   const API_PORT = 3002;
   let authToken: string;
@@ -181,8 +194,17 @@ describe('Telemetry API Endpoints', () => {
   beforeAll(async () => {
     db = getDbClient();
     
-    // Clean up any existing telemetry data
+    // Clean up any existing data
     await db.delete(telemetrySchema);
+    await db.delete(tenantSchema);
+    
+    // Create a default tenant with ID=1 for DEFAULT_TENANT_ID compatibility
+    const tenantResult = await db.insert(tenantSchema).values({
+      id: 1,
+      name: 'api-test-tenant',
+      apiKey: 'api-test-tenant-key',
+    }).returning();
+    defaultTenantId = tenantResult[0].id;
     
     // Initialize PocketMQTT
     app = new PocketMQTT({
@@ -201,15 +223,16 @@ describe('Telemetry API Endpoints', () => {
   });
 
   afterAll(async () => {
-    // Clean up telemetry data before stopping
+    // Clean up data before stopping
     await db.delete(telemetrySchema);
+    await db.delete(tenantSchema);
     
     // Now stop the app (which will disconnect database)
     await app.stop();
   }, 15000);
 
   it('should submit telemetry via POST /api/v1/telemetry', async () => {
-    // When: POST telemetry data
+    // When: POST telemetry data with tenantId
     const response = await fetch(`http://localhost:${API_PORT}/api/v1/telemetry`, {
       method: 'POST',
       headers: {
@@ -218,7 +241,8 @@ describe('Telemetry API Endpoints', () => {
       },
       body: JSON.stringify({
         topic: 'api/test/topic',
-        payload: 'test payload from API'
+        payload: 'test payload from API',
+        tenantId: defaultTenantId
       })
     });
 
@@ -261,9 +285,9 @@ describe('Telemetry API Endpoints', () => {
   it('should retrieve telemetry via GET /api/v1/telemetry', async () => {
     // Given: Some telemetry data in database
     await db.insert(telemetrySchema).values([
-      { topic: 'test/topic1', payload: 'payload1', timestamp: new Date() },
-      { topic: 'test/topic2', payload: 'payload2', timestamp: new Date() },
-      { topic: 'test/topic3', payload: 'payload3', timestamp: new Date() },
+      { tenantId: defaultTenantId, topic: 'test/topic1', payload: 'payload1', timestamp: new Date() },
+      { tenantId: defaultTenantId, topic: 'test/topic2', payload: 'payload2', timestamp: new Date() },
+      { tenantId: defaultTenantId, topic: 'test/topic3', payload: 'payload3', timestamp: new Date() },
     ]);
 
     // When: GET telemetry data
@@ -285,9 +309,9 @@ describe('Telemetry API Endpoints', () => {
   it('should filter telemetry by topic', async () => {
     // Given: Telemetry data with different topics
     await db.insert(telemetrySchema).values([
-      { topic: 'sensor/temperature', payload: '25.5', timestamp: new Date() },
-      { topic: 'sensor/humidity', payload: '60', timestamp: new Date() },
-      { topic: 'sensor/temperature', payload: '26.0', timestamp: new Date() },
+      { tenantId: defaultTenantId, topic: 'sensor/temperature', payload: '25.5', timestamp: new Date() },
+      { tenantId: defaultTenantId, topic: 'sensor/humidity', payload: '60', timestamp: new Date() },
+      { tenantId: defaultTenantId, topic: 'sensor/temperature', payload: '26.0', timestamp: new Date() },
     ]);
 
     // When: GET telemetry filtered by topic
@@ -310,6 +334,7 @@ describe('Telemetry API Endpoints', () => {
     const records = [];
     for (let i = 0; i < 50; i++) {
       records.push({
+        tenantId: defaultTenantId,
         topic: `test/topic${i}`,
         payload: `payload${i}`,
         timestamp: new Date(Date.now() + i * 1000) // Spread timestamps
