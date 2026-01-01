@@ -27,7 +27,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">PocketMQTT</CardTitle>
@@ -35,7 +35,7 @@ export function LoginPage() {
         </CardHeader>
         <CardContent>
           {error && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-md mb-4 text-sm">
+            <div className="mb-4 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
               {error}
             </div>
           )}

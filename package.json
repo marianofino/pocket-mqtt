@@ -10,8 +10,7 @@
   },
   "scripts": {
     "build": "npm run build:dashboard && tsc",
-    "build:dashboard": "tsx scripts/build-dashboard.ts",
-    "build:dashboard:full": "cd src/services/dashboard && npm run build",
+    "build:dashboard": "cd src/services/dashboard && npm install && npm run build",
     "dev": "tsx src/index.ts",
     "dev:dashboard": "cd src/services/dashboard && npm run dev",
     "start": "node dist/index.js",

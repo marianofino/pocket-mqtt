@@ -97,23 +97,17 @@ async function fileExists(filePath: string): Promise<boolean> {
 export async function ensureAdminStaticAssets(adminDistPath: string, logger?: FastifyBaseLogger): Promise<void> {
   const indexPath = path.join(adminDistPath, 'index.html');
   const assetsDir = path.join(adminDistPath, 'assets');
-  const mainJsPath = path.join(assetsDir, 'main.js');
-  const cssPath = path.join(assetsDir, 'style.css');
 
   const indexExists = await fileExists(indexPath);
-  const mainJsExists = await fileExists(mainJsPath);
-  const cssExists = await fileExists(cssPath);
+  
+  if (!indexExists) {
+    logger?.warn('Admin dashboard assets missing. Generating lightweight fallback bundle.');
 
-  if (indexExists && mainJsExists && cssExists) {
-    return;
+    await mkdir(assetsDir, { recursive: true });
+    await writeFile(indexPath, DEFAULT_INDEX_HTML, 'utf-8');
+    await writeFile(path.join(assetsDir, 'main.js'), DEFAULT_MAIN_JS, 'utf-8');
+    await writeFile(path.join(assetsDir, 'style.css'), DEFAULT_CSS, 'utf-8');
+
+    logger?.info({ adminDistPath }, 'Admin dashboard fallback assets ready');
   }
-
-  logger?.warn('Admin dashboard assets missing. Generating lightweight fallback bundle.');
-
-  await mkdir(assetsDir, { recursive: true });
-  await writeFile(indexPath, DEFAULT_INDEX_HTML, 'utf-8');
-  await writeFile(mainJsPath, DEFAULT_MAIN_JS, 'utf-8');
-  await writeFile(cssPath, DEFAULT_CSS, 'utf-8');
-
-  logger?.info({ adminDistPath }, 'Admin dashboard fallback assets ready');
 }
