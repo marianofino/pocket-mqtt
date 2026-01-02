@@ -13,12 +13,26 @@
 const API_BASE_URL = 'http://localhost:3000';
 const USERNAME = 'admin';
 const PASSWORD = 'admin123';
+const TENANT_ID = Number.parseInt(process.env.TENANT_ID || '1', 10);
 
 interface TelemetryRecord {
   id: number;
   topic: string;
   payload: string;
   timestamp: string;
+}
+
+interface LoginResponse {
+  token: string;
+}
+
+interface TelemetryListResponse {
+  data: TelemetryRecord[];
+  pagination: { total: number; limit: number; offset: number };
+}
+
+interface HealthResponse {
+  status: string;
 }
 
 console.log('=== REST API Client Example ===\n');
@@ -35,7 +49,7 @@ async function login(): Promise<string> {
     throw new Error(`Login failed: ${response.status} ${response.statusText}`);
   }
 
-  const data = await response.json();
+  const data = await response.json() as LoginResponse;
   console.log('✓ Login successful');
   console.log(`  Token: ${data.token.substring(0, 20)}...\n`);
   return data.token;
@@ -55,7 +69,8 @@ async function postTelemetry(token: string) {
         temperature: 22.5,
         humidity: 65,
         timestamp: new Date().toISOString()
-      })
+      }),
+      tenantId: TENANT_ID
     })
   });
 
@@ -63,7 +78,7 @@ async function postTelemetry(token: string) {
     throw new Error(`POST telemetry failed: ${response.status} ${response.statusText}`);
   }
 
-  const data = await response.json();
+  const data = await response.json() as { success: boolean; message?: string };
   console.log('✓ Telemetry posted successfully');
   console.log(`  Response: ${JSON.stringify(data)}\n`);
 }
@@ -85,7 +100,7 @@ async function getTelemetry(token: string) {
     throw new Error(`GET telemetry failed: ${response.status} ${response.statusText}`);
   }
 
-  const data = await response.json();
+  const data = await response.json() as TelemetryListResponse;
   console.log('✓ Telemetry retrieved successfully');
   console.log(`  Total records: ${data.pagination.total}`);
   console.log(`  Records returned: ${data.data.length}\n`);
@@ -114,7 +129,7 @@ async function getTelemetryByTopic(token: string, topic: string) {
     throw new Error(`GET telemetry by topic failed: ${response.status} ${response.statusText}`);
   }
 
-  const data = await response.json();
+  const data = await response.json() as TelemetryListResponse;
   console.log('✓ Topic telemetry retrieved');
   console.log(`  Records found: ${data.pagination.total}\n`);
 }
@@ -141,7 +156,7 @@ async function checkHealth() {
     throw new Error(`Health check failed: ${response.status} ${response.statusText}`);
   }
 
-  const data = await response.json();
+  const data = await response.json() as HealthResponse;
   console.log('✓ Server is healthy');
   console.log(`  Status: ${data.status}\n`);
 }
