@@ -1,6 +1,6 @@
 import { createDeviceRepository } from '@pocket/db';
 import type { DeviceRepository, Device, NewDevice, UpdateDevice } from '@pocket/db';
-import { generateDeviceToken } from '@pocket/core';
+import { generateDeviceToken, hashDeviceToken } from '@pocket/core';
 import { randomBytes } from 'crypto';
 import type { FastifyBaseLogger } from 'fastify';
 
@@ -8,43 +8,50 @@ import type { FastifyBaseLogger } from 'fastify';
  * Service for managing MQTT devices with auto-generated tokens.
  * 
  * Handles business logic for:
- * - Creating devices with unique tokens
+ * - Creating devices with unique tokens (stored as hashed values)
  * - Regenerating device tokens
  * - Managing device metadata (name, labels, notes)
+ * 
+ * Security: Device tokens are hashed using scrypt before storage.
+ * The plaintext token is only returned once during device creation.
  */
 export class DeviceService {
   private repository: DeviceRepository;
-  private logger?: FastifyBaseLogger;
 
-  constructor(repository?: DeviceRepository, logger?: FastifyBaseLogger) {
+  constructor(repository?: DeviceRepository) {
     this.repository = repository ?? createDeviceRepository();
-    this.logger = logger;
   }
 
   /**
    * Attach a logger after construction (useful when services are created
    * before the Fastify instance is available).
+   * 
+   * Note: Logger is no longer used since token collision checking has been removed.
    */
-  setLogger(logger?: FastifyBaseLogger): void {
-    this.logger = logger;
+  setLogger(_logger?: FastifyBaseLogger): void {
+    // Logger no longer needed - method kept for backward compatibility
   }
 
   /**
    * Create a new device with auto-generated token.
    * 
+   * Security: The plaintext token is returned in the response but
+   * only a hashed version is stored in the database.
+   * 
    * @param data Device data (tenantId and name required, labels and notes optional)
-   * @returns Promise with created device including generated token
+   * @returns Promise with created device including plaintext token (only available once)
    */
   async createDevice(data: {
     tenantId: number;
     name: string;
     labels?: string[];
     notes?: string;
-  }): Promise<Device> {
+  }): Promise<Device & { token: string }> {
     // Generate unique device ID using crypto for security
     const randomSuffix = randomBytes(4).toString('hex');
     const deviceId = `device-${Date.now()}-${randomSuffix}`;
-    const token = await this.generateUniqueToken();
+    const plaintextToken = generateDeviceToken();
+    const tokenHash = await hashDeviceToken(plaintextToken);
 
     // Serialize labels to JSON if provided
     const labelsJson = data.labels ? JSON.stringify(data.labels) : null;
@@ -52,13 +59,19 @@ export class DeviceService {
     const newDevice: NewDevice = {
       tenantId: data.tenantId,
       deviceId,
-      token,
+      tokenHash,
       name: data.name,
       labels: labelsJson,
       notes: data.notes ?? null,
     };
 
-    return await this.repository.create(newDevice);
+    const created = await this.repository.create(newDevice);
+    
+    // Return device with plaintext token (only available once)
+    return {
+      ...created,
+      token: plaintextToken,
+    };
   }
 
   /**
@@ -107,12 +120,27 @@ export class DeviceService {
    * Regenerate a device token.
    * Invalidates the old token and generates a new one.
    * 
+   * Security: Returns the plaintext token (only available once).
+   * Only a hashed version is stored in the database.
+   * 
    * @param id Device ID
-   * @returns Promise with updated device or undefined if not found
+   * @returns Promise with updated device and new plaintext token, or undefined if not found
    */
-  async regenerateToken(id: number): Promise<Device | undefined> {
-    const newToken = await this.generateUniqueToken();
-    return await this.repository.update(id, { token: newToken });
+  async regenerateToken(id: number): Promise<(Device & { token: string }) | undefined> {
+    const plaintextToken = generateDeviceToken();
+    const tokenHash = await hashDeviceToken(plaintextToken);
+    
+    const updated = await this.repository.update(id, { tokenHash });
+    
+    if (!updated) {
+      return undefined;
+    }
+    
+    // Return device with plaintext token (only available once)
+    return {
+      ...updated,
+      token: plaintextToken,
+    };
   }
 
   /**
@@ -150,35 +178,6 @@ export class DeviceService {
    */
   async deleteDevice(id: number): Promise<void> {
     await this.repository.delete(id);
-  }
-
-  /**
-   * Generate a unique token by checking for collisions.
-   * In the extremely unlikely event of a collision, generates a new token.
-   * 
-   * @returns Promise with unique token
-   */
-  private async generateUniqueToken(): Promise<string> {
-    const maxAttempts = 10;
-    
-    for (let i = 0; i < maxAttempts; i++) {
-      const token = generateDeviceToken();
-      const existing = await this.repository.findByToken(token);
-      
-      if (!existing) {
-        return token;
-      }
-      
-      // Collision detected, try again
-      const message = `Token collision detected (attempt ${i + 1}/${maxAttempts}), generating new token`;
-      if (this.logger) {
-        this.logger.warn(message);
-      } else {
-        console.error(message);
-      }
-    }
-    
-    throw new Error('Failed to generate unique token after maximum attempts');
   }
 
   /**

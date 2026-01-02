@@ -7,6 +7,8 @@ import type { DeviceRepository, Device, NewDevice, UpdateDevice } from './Device
 /**
  * SQLite implementation of DeviceRepository.
  * Uses better-sqlite3 driver with Drizzle ORM.
+ * 
+ * Security: Stores device tokens as hashed values using scrypt.
  */
 export class SQLiteDeviceRepository implements DeviceRepository {
   constructor(private db: BetterSQLite3Database<typeof schema>) {}
@@ -28,14 +30,6 @@ export class SQLiteDeviceRepository implements DeviceRepository {
     const results = await this.db.select()
       .from(deviceToken)
       .where(eq(deviceToken.deviceId, deviceId))
-      .limit(1);
-    return results[0];
-  }
-
-  async findByToken(token: string): Promise<Device | undefined> {
-    const results = await this.db.select()
-      .from(deviceToken)
-      .where(eq(deviceToken.token, token))
       .limit(1);
     return results[0];
   }

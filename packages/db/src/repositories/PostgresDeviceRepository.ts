@@ -7,6 +7,8 @@ import type { DeviceRepository, Device, NewDevice, UpdateDevice } from './Device
 /**
  * PostgreSQL implementation of DeviceRepository.
  * Uses postgres.js driver with Drizzle ORM.
+ * 
+ * Security: Stores device tokens as hashed values using scrypt.
  */
 export class PostgresDeviceRepository implements DeviceRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
@@ -28,14 +30,6 @@ export class PostgresDeviceRepository implements DeviceRepository {
     const results = await this.db.select()
       .from(deviceToken)
       .where(eq(deviceToken.deviceId, deviceId))
-      .limit(1);
-    return results[0];
-  }
-
-  async findByToken(token: string): Promise<Device | undefined> {
-    const results = await this.db.select()
-      .from(deviceToken)
-      .where(eq(deviceToken.token, token))
       .limit(1);
     return results[0];
   }

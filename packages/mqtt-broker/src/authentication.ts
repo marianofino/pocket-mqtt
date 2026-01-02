@@ -1,6 +1,7 @@
 import type Aedes from 'aedes';
 import type { AuthenticateError, Client, PublishPacket } from 'aedes';
 import { getDbClient, getDbAdapter, deviceToken as deviceTokenSchema, schemaPg } from '@pocket/db';
+import { verifyDeviceToken } from '@pocket/core';
 import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -14,6 +15,9 @@ type PostgresDbClient = PostgresJsDatabase<typeof schemaPg>;
 /**
  * Setup MQTT authentication hooks for device token validation.
  * Implements device-token based authentication as per ARCHITECTURE.md.
+ * 
+ * Security: Tokens are verified against hashed values stored in the database
+ * using constant-time comparison to prevent timing attacks.
  * 
  * @param aedes - Aedes MQTT broker instance
  */
@@ -31,20 +35,20 @@ export function setupMQTTAuthentication(aedes: Aedes): void {
     try {
       const token = password.toString();
       
-      // Look up device token in database based on adapter
-      let deviceTokenRecord: { deviceId: string; token: string; expiresAt: Date | null; tenantId: number } | undefined;
+      // Look up device by deviceId (username) in database based on adapter
+      let deviceTokenRecord: { deviceId: string; tokenHash: string; expiresAt: Date | null; tenantId: number } | undefined;
       if (adapter === 'postgres') {
         const db = getDbClient() as PostgresDbClient;
         const results = await db.select()
           .from(deviceTokenSchemaPg)
-          .where(eq(deviceTokenSchemaPg.token, token))
+          .where(eq(deviceTokenSchemaPg.deviceId, username))
           .limit(1);
         deviceTokenRecord = results[0];
       } else {
         const db = getDbClient() as SqliteDbClient;
         const results = await db.select()
           .from(deviceTokenSchema)
-          .where(eq(deviceTokenSchema.token, token))
+          .where(eq(deviceTokenSchema.deviceId, username))
           .limit(1);
         deviceTokenRecord = results[0];
       }
@@ -54,8 +58,9 @@ export function setupMQTTAuthentication(aedes: Aedes): void {
         return;
       }
 
-      // Check if token matches the device ID
-      if (deviceTokenRecord.deviceId !== username) {
+      // Verify token hash using constant-time comparison
+      const tokenValid = await verifyDeviceToken(token, deviceTokenRecord.tokenHash);
+      if (!tokenValid) {
         callback(null, false);
         return;
       }

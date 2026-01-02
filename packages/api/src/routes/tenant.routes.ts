@@ -1,3 +1,5 @@
+/// <reference path="../types.d.ts" />
+
 import type { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
 import type { TenantService } from '../services/TenantService.js';
 import type { UserService } from '../services/UserService.js';

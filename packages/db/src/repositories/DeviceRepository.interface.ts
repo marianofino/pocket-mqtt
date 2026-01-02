@@ -1,11 +1,14 @@
 /**
  * Device record from database.
+ * 
+ * Security: The token field contains the hashed token, not the plaintext.
+ * The plaintext token is only available during device creation.
  */
 export interface Device {
   id: number;
   tenantId: number;
   deviceId: string;
-  token: string;
+  tokenHash: string;
   name: string;
   labels: string | null; // JSON string array
   notes: string | null;
@@ -15,11 +18,13 @@ export interface Device {
 
 /**
  * New device to insert.
+ * 
+ * Security: tokenHash should contain the hashed token, not plaintext.
  */
 export interface NewDevice {
   tenantId: number;
   deviceId: string;
-  token: string;
+  tokenHash: string;
   name: string;
   labels?: string | null; // JSON string array
   notes?: string | null;
@@ -27,10 +32,12 @@ export interface NewDevice {
 }
 
 /**
- * Device update data (for token regeneration).
+ * Device update data (for token regeneration and metadata updates).
+ * 
+ * Security: tokenHash should contain the hashed token, not plaintext.
  */
 export interface UpdateDevice {
-  token?: string;
+  tokenHash?: string;
   name?: string;
   labels?: string | null;
   notes?: string | null;
@@ -47,8 +54,8 @@ export interface UpdateDevice {
  */
 export interface DeviceRepository {
   /**
-   * Create a new device with auto-generated token.
-   * @param device Device data to insert
+   * Create a new device with hashed token.
+   * @param device Device data to insert (with tokenHash)
    * @returns Promise with created device
    */
   create(device: NewDevice): Promise<Device>;
@@ -66,13 +73,6 @@ export interface DeviceRepository {
    * @returns Promise with device or undefined if not found
    */
   findByDeviceId(deviceId: string): Promise<Device | undefined>;
-
-  /**
-   * Find a device by its token.
-   * @param token Device token
-   * @returns Promise with device or undefined if not found
-   */
-  findByToken(token: string): Promise<Device | undefined>;
 
   /**
    * List all devices with optional pagination.

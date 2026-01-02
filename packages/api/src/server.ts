@@ -1,3 +1,5 @@
+/// <reference path="./types.d.ts" />
+
 import Fastify from 'fastify';
 import fastifyJwt from '@fastify/jwt';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';

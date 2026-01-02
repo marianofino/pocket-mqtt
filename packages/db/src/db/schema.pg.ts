@@ -50,19 +50,22 @@ export const telemetry = pgTable('Telemetry', {
  * DeviceToken table schema for PostgreSQL
  * Stores device authentication tokens for MQTT connections
  * with additional metadata for device management
+ * 
+ * Security: Tokens are stored as hashed values using scrypt to prevent
+ * unauthorized access in case of database compromise. The plaintext token
+ * is only available once during device creation.
  */
 export const deviceToken = pgTable('DeviceToken', {
   id: serial('id').primaryKey(),
   tenantId: integer('tenantId').notNull().references(() => tenant.id),
   deviceId: text('deviceId').notNull().unique(),
-  token: text('token').notNull().unique(),
+  tokenHash: text('tokenHash').notNull(), // Hashed token using scrypt
   name: text('name').notNull(), // Device name for identification
   labels: text('labels'), // JSON array of labels for filtering/queries (optional)
   notes: text('notes'), // Free text field for comments/notes (optional)
   createdAt: timestamp('createdAt', { mode: 'date' }).notNull().defaultNow(),
   expiresAt: timestamp('expiresAt', { mode: 'date' }),
 }, (table) => ({
-  tokenIdx: index('DeviceToken_token_idx').on(table.token),
   deviceIdIdx: index('DeviceToken_deviceId_idx').on(table.deviceId),
   tenantIdIdx: index('DeviceToken_tenantId_idx').on(table.tenantId),
 }));
