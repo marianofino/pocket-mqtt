@@ -13,7 +13,6 @@ coverage/
 
 # pnpm
 .pnpm-store/
-pnpm-lock.yaml
 
 # TypeScript build artifacts
 *.tsbuildinfo
