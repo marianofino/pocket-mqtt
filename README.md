@@ -1,6 +1,6 @@
 # PocketMQTT
 
-A lightweight, API-first IoT platform with MQTT broker and REST API running in a single Node.js process.
+A lightweight, API-first IoT platform with MQTT broker and REST API in a modern pnpm monorepo structure.
 
 ## Features
 
@@ -13,16 +13,34 @@ A lightweight, API-first IoT platform with MQTT broker and REST API running in a
 - 🏗️ **Repository Pattern**: Abstract database operations for easy DB switching
 - 📦 **ESM + TypeScript**: Modern JavaScript with full type safety
 - 🧪 **TDD-Enabled**: Vitest for testing with built-in coverage
-- ⚡ **Single Process**: Both services in one lightweight process
+- ⚡ **Monorepo**: Organized pnpm workspace with reusable packages
+- 🔧 **Two Deployment Modes**: Full platform (API + Broker) or standalone broker
 
 ## Requirements
 
-- Node.js v24 or higher
+- Node.js v24 or higher (v20+ will work but shows warnings)
+- pnpm v10+
 
 ## Installation
 
 ```bash
-npm install
+pnpm install
+```
+
+## Monorepo Structure
+
+```
+pocket-mqtt/
+├── packages/              # Reusable packages
+│   ├── core/             # Core utilities, types, validation
+│   ├── db/               # Database schemas, repositories, Drizzle config
+│   ├── telemetry-service/ # Telemetry buffering and flushing service
+│   ├── mqtt-broker/      # MQTT broker library (Aedes + auth hooks)
+│   └── api/              # Fastify plugins, routes, and services
+├── apps/                 # Executable applications
+│   ├── api/              # REST API + MQTT broker (full platform)
+│   └── broker/           # Standalone MQTT broker (MQTT→DB only)
+└── tsconfig.base.json    # Shared TypeScript configuration
 ```
 
 ## Database Setup
@@ -32,7 +50,7 @@ The platform uses Drizzle ORM with **SQLite (default)** or **PostgreSQL** for te
 ### SQLite (Default)
 ```bash
 # Push schema to SQLite database
-npm run db:push
+pnpm db:push
 ```
 
 ### PostgreSQL (Optional)
@@ -44,57 +62,146 @@ export DATABASE_URL="postgresql://username:password@localhost:5432/pocket_mqtt"
 # Create database
 createdb pocket_mqtt
 
-# Apply PostgreSQL migrations
-psql -d pocket_mqtt -f drizzle-pg/0000_initial.sql
+# Apply PostgreSQL migrations (from packages/db)
+psql -d pocket_mqtt -f packages/db/drizzle-pg/0000_initial.sql
 ```
 
-See `drizzle-pg/README.md` for detailed PostgreSQL setup instructions.
+See `packages/db/drizzle-pg/README.md` for detailed PostgreSQL setup instructions.
 
 ## Development
 
+### Run Both API and Broker Together
 ```bash
-# Run in development mode with hot reload
-npm run dev
+# Start both services with hot reload
+pnpm dev:all
+```
 
-# Build TypeScript to JavaScript
-npm run build
+### Run Services Individually
+```bash
+# Run API only (includes telemetry service)
+pnpm dev:api
 
-# Start production build
-npm start
+# Run MQTT broker only
+pnpm dev:broker
+```
+
+### Build All Packages
+```bash
+# Build all packages and apps
+pnpm build
+
+# Build specific package
+pnpm --filter @pocket/db build
+```
+
+### Production
+
+```bash
+# Build everything
+pnpm build
+
+# Start API
+pnpm start:api
+
+# Start broker
+pnpm start:broker
 ```
 
 ## Testing
 
 ```bash
-# Run tests once
-npm test
+# Run all tests
+pnpm test
+
+# Run tests in specific package
+pnpm --filter @pocket/db test
 
 # Run tests in watch mode
-npm run test:watch
+pnpm test:watch
 
 # Run tests with coverage
-npm run test:coverage
+pnpm test:coverage
 ```
+
+## Packages
+
+### @pocket/core
+Core utilities, types, and validation schemas used across all packages.
+- Token generation
+- Tenant utilities
+- MQTT payload validation (Zod schemas)
+
+### @pocket/db
+Database layer with Drizzle ORM support for SQLite and PostgreSQL.
+- Schema definitions (SQLite and PostgreSQL)
+- Repository pattern implementations
+- Database connection management
+- Migrations via Drizzle Kit
+
+### @pocket/telemetry-service
+Telemetry buffering and batch persistence service.
+- In-memory message buffering
+- Automatic flushing (every 2s or 100 messages)
+- High-throughput capable (>1000 msg/min)
+
+### @pocket/mqtt-broker
+MQTT broker library based on Aedes with authentication hooks.
+- Device token authentication
+- MQTT publish handlers
+- Reusable broker configuration
+
+### @pocket/api
+Fastify-based REST API with plugins and routes.
+- JWT authentication
+- Telemetry endpoints
+- Device management
+- Tenant management
+- User management
+
+## Apps
+
+### @pocket/app-api
+Full-featured REST API server with telemetry service.
+- Exposes REST endpoints on port 3000
+- Includes all services (Device, Tenant, User, Telemetry)
+- JWT-based authentication
+- Swagger/OpenAPI support (future)
+
+### @pocket/app-broker
+Standalone MQTT broker for MQTT→DB ingestion without REST API.
+- MQTT broker on port 1883
+- Direct telemetry persistence
+- Lightweight deployment option
+- No REST API overhead
 
 ## Usage
 
-### As a Module
+### As Separate Services
 
-```typescript
-import { PocketMQTT } from 'pocket-mqtt';
-
-const app = new PocketMQTT({
-  mqttPort: 1883,
-  apiPort: 3000
-});
-
-await app.start();
-```
-
-### Standalone
+### As Separate Services
 
 ```bash
-npm start
+# Start API server (port 3000)
+pnpm start:api
+
+# Start MQTT broker (port 1883)
+pnpm start:broker
+
+# Or in development with hot reload
+pnpm dev:all  # Both together
+pnpm dev:api  # API only
+pnpm dev:broker  # Broker only
+```
+
+### As a Library
+
+You can import individual packages in your own projects:
+
+```typescript
+import { TelemetryService } from '@pocket/telemetry-service';
+import { MQTTServer } from '@pocket/mqtt-broker';
+import { APIServer } from '@pocket/api';
+import { getDbClient } from '@pocket/db';
 ```
 
 ## API Endpoints
