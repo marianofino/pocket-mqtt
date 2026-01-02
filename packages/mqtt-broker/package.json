@@ -1,5 +1,5 @@
 {
-  "name": "@pocket/mqtt-broker",
+  "name": "@pocket-mqtt/mqtt-broker",
   "version": "1.0.0",
   "description": "MQTT broker library with authentication hooks for PocketMQTT",
   "type": "module",
@@ -19,9 +19,9 @@
   "keywords": ["pocket-mqtt", "mqtt", "broker", "aedes"],
   "license": "ISC",
   "dependencies": {
-    "@pocket/core": "workspace:*",
-    "@pocket/db": "workspace:*",
-    "@pocket/telemetry-service": "workspace:*",
+    "@pocket-mqtt/core": "workspace:*",
+    "@pocket-mqtt/db": "workspace:*",
+    "@pocket-mqtt/telemetry-service": "workspace:*",
     "aedes": "^0.51.3"
   },
   "devDependencies": {

@@ -7,9 +7,9 @@
 You are the Lead Architect. Your goal is to keep the platform minimal, fast, developer-friendly, and well-organized following monorepo best practices.
 
 ## Monorepo Structure
-- **packages/**: Reusable library packages (`@pocket/core`, `@pocket/db`, `@pocket/telemetry-service`, `@pocket/mqtt-broker`, `@pocket/api`)
-- **apps/**: Executable applications (`@pocket/app-api`, `@pocket/app-broker`)
-- **Shared config**: `tsconfig.base.json` with `@pocket/*` path aliases
+- **packages/**: Reusable library packages (`@pocket-mqtt/core`, `@pocket-mqtt/db`, `@pocket-mqtt/telemetry-service`, `@pocket-mqtt/mqtt-broker`, `@pocket-mqtt/api`)
+- **apps/**: Executable applications (`@pocket-mqtt/app-api`, `@pocket-mqtt/app-broker`)
+- **Shared config**: `tsconfig.base.json` with `@pocket-mqtt/*` path aliases
 - **Package manager**: pnpm with workspace support
 
 ## TDD Workflow (Mandatory)
@@ -30,7 +30,7 @@ Before adding any new functionality or refactoring:
 - **Performance:** Ensure DB writes follow the "Batching Rule" in ARCHITECTURE.md.
 - **Monorepo Hygiene:**
   - Each package should have a single responsibility
-  - Use `@pocket/*` path aliases for cross-package imports
+  - Use `@pocket-mqtt/*` path aliases for cross-package imports
   - Dependencies flow from core → db → services → apps
   - No circular dependencies between packages
   - Build order: core → db → telemetry-service → (mqtt-broker, api) → apps

@@ -1,5 +1,5 @@
 {
-  "name": "@pocket/telemetry-service",
+  "name": "@pocket-mqtt/telemetry-service",
   "version": "1.0.0",
   "description": "Telemetry buffering and flushing service for PocketMQTT",
   "type": "module",
@@ -19,8 +19,8 @@
   "keywords": ["pocket-mqtt", "telemetry", "service"],
   "license": "ISC",
   "dependencies": {
-    "@pocket/core": "workspace:*",
-    "@pocket/db": "workspace:*"
+    "@pocket-mqtt/core": "workspace:*",
+    "@pocket-mqtt/db": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.0.3",

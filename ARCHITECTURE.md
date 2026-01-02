@@ -45,7 +45,7 @@ pocket-mqtt/
 **Key Benefits:**
 - Clear separation between reusable libraries (`packages/`) and executable apps (`apps/`)
 - Packages can be independently versioned and published
-- Shared TypeScript configuration with `@pocket/*` path aliases
+- Shared TypeScript configuration with `@pocket-mqtt/*` path aliases
 - Two deployment modes: full platform (API) or lightweight broker
 - Easier testing and development with isolated concerns
 - Scalable for future microservices architecture
@@ -53,14 +53,14 @@ pocket-mqtt/
 ## 3. Package Dependencies
 
 ```
-@pocket/core (no internal deps)
+@pocket-mqtt/core (no internal deps)
     ↓
-@pocket/db (depends on core)
+@pocket-mqtt/db (depends on core)
     ↓
-@pocket/telemetry-service (depends on db, core)
+@pocket-mqtt/telemetry-service (depends on db, core)
     ↓
-@pocket/mqtt-broker (depends on telemetry-service, db, core)
-@pocket/api (depends on telemetry-service, db, core)
+@pocket-mqtt/mqtt-broker (depends on telemetry-service, db, core)
+@pocket-mqtt/api (depends on telemetry-service, db, core)
     ↓
 apps/api (uses api, telemetry-service, db, core)
 apps/broker (uses mqtt-broker, telemetry-service, db, core)
@@ -79,7 +79,7 @@ apps/broker (uses mqtt-broker, telemetry-service, db, core)
 - **Performance:** SQLite WAL mode enabled for concurrent I/O; PostgreSQL uses connection pooling.
 - **Drizzle ORM:** Schema-first approach with type-safe queries and automatic migrations.
 - **TypeScript:** Strict mode with composite project references for incremental builds.
-- **Path Aliases:** `@pocket/*` aliases map to package source for clean imports across the monorepo.
+- **Path Aliases:** `@pocket-mqtt/*` aliases map to package source for clean imports across the monorepo.
 
 ## 6. Repository Pattern
 - **Interface:** `MessageRepository`, `DeviceRepository`, `TenantRepository`, and `UserRepository` define core operations.
@@ -94,7 +94,7 @@ apps/broker (uses mqtt-broker, telemetry-service, db, core)
 - **Build:** `pnpm build` - Builds all packages and apps using TypeScript composite projects
 - **Dev:** `pnpm dev:all` - Runs both API and broker with hot reload using concurrently
 - **Test:** `pnpm test` - Runs tests across all packages
-- **Individual builds:** `pnpm --filter @pocket/db build` - Build specific package
+- **Individual builds:** `pnpm --filter @pocket-mqtt/db build` - Build specific package
 
 ## 8. Security Implementation
 

@@ -1,5 +1,5 @@
 /**
- * @pocket/core - Core utilities, types, and validation for PocketMQTT
+ * @pocket-mqtt/core - Core utilities, types, and validation for PocketMQTT
  */
 
 // Export utilities

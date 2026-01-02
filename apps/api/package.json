@@ -1,5 +1,5 @@
 {
-  "name": "@pocket/app-api",
+  "name": "@pocket-mqtt/app-api",
   "version": "1.0.0",
   "description": "PocketMQTT REST API executable",
   "type": "module",
@@ -15,10 +15,10 @@
   "keywords": ["pocket-mqtt", "api", "executable"],
   "license": "ISC",
   "dependencies": {
-    "@pocket/core": "workspace:*",
-    "@pocket/db": "workspace:*",
-    "@pocket/api": "workspace:*",
-    "@pocket/telemetry-service": "workspace:*",
+    "@pocket-mqtt/core": "workspace:*",
+    "@pocket-mqtt/db": "workspace:*",
+    "@pocket-mqtt/api": "workspace:*",
+    "@pocket-mqtt/telemetry-service": "workspace:*",
     "dotenv": "^17.2.3"
   },
   "devDependencies": {

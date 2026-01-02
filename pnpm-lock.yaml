@@ -69,16 +69,16 @@ importers:
 
   apps/api:
     dependencies:
-      '@pocket/api':
+      '@pocket-mqtt/api':
         specifier: workspace:*
         version: link:../../packages/api
-      '@pocket/core':
+      '@pocket-mqtt/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@pocket/db':
+      '@pocket-mqtt/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@pocket/telemetry-service':
+      '@pocket-mqtt/telemetry-service':
         specifier: workspace:*
         version: link:../../packages/telemetry-service
       dotenv:
@@ -97,16 +97,16 @@ importers:
 
   apps/broker:
     dependencies:
-      '@pocket/core':
+      '@pocket-mqtt/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@pocket/db':
+      '@pocket-mqtt/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@pocket/mqtt-broker':
+      '@pocket-mqtt/mqtt-broker':
         specifier: workspace:*
         version: link:../../packages/mqtt-broker
-      '@pocket/telemetry-service':
+      '@pocket-mqtt/telemetry-service':
         specifier: workspace:*
         version: link:../../packages/telemetry-service
       dotenv:
@@ -128,13 +128,13 @@ importers:
       '@fastify/jwt':
         specifier: ^10.0.0
         version: 10.0.0
-      '@pocket/core':
+      '@pocket-mqtt/core':
         specifier: workspace:*
         version: link:../core
-      '@pocket/db':
+      '@pocket-mqtt/db':
         specifier: workspace:*
         version: link:../db
-      '@pocket/telemetry-service':
+      '@pocket-mqtt/telemetry-service':
         specifier: workspace:*
         version: link:../telemetry-service
       fastify:
@@ -172,7 +172,7 @@ importers:
 
   packages/db:
     dependencies:
-      '@pocket/core':
+      '@pocket-mqtt/core':
         specifier: workspace:*
         version: link:../core
       better-sqlite3:
@@ -209,13 +209,13 @@ importers:
 
   packages/mqtt-broker:
     dependencies:
-      '@pocket/core':
+      '@pocket-mqtt/core':
         specifier: workspace:*
         version: link:../core
-      '@pocket/db':
+      '@pocket-mqtt/db':
         specifier: workspace:*
         version: link:../db
-      '@pocket/telemetry-service':
+      '@pocket-mqtt/telemetry-service':
         specifier: workspace:*
         version: link:../telemetry-service
       aedes:
@@ -237,10 +237,10 @@ importers:
 
   packages/telemetry-service:
     dependencies:
-      '@pocket/core':
+      '@pocket-mqtt/core':
         specifier: workspace:*
         version: link:../core
-      '@pocket/db':
+      '@pocket-mqtt/db':
         specifier: workspace:*
         version: link:../db
     devDependencies:

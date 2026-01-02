@@ -1,5 +1,5 @@
 /**
- * @pocket/db - Database schemas, repositories, and connection for PocketMQTT
+ * @pocket-mqtt/db - Database schemas, repositories, and connection for PocketMQTT
  */
 export * from './database.js';
 export * from './db/schema.js';

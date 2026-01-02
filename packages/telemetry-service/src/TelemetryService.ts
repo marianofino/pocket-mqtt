@@ -1,5 +1,5 @@
-import { createMessageRepository } from '@pocket/db';
-import type { MessageRepository } from '@pocket/db';
+import { createMessageRepository } from '@pocket-mqtt/db';
+import type { MessageRepository } from '@pocket-mqtt/db';
 
 interface TelemetryMessage {
   tenantId: number;

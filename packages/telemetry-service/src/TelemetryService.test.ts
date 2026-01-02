@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
 const insertBatch = vi.fn<(messages: unknown[]) => Promise<void>>(() => Promise.resolve());
 
-vi.mock('@pocket/db', () => ({
+vi.mock('@pocket-mqtt/db', () => ({
   createMessageRepository: () => ({ insertBatch })
 }));
 

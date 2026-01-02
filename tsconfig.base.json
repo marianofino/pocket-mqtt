@@ -18,16 +18,16 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-      "@pocket/core": ["./packages/core/src/index.ts"],
-      "@pocket/core/*": ["./packages/core/src/*"],
-      "@pocket/db": ["./packages/db/src/index.ts"],
-      "@pocket/db/*": ["./packages/db/src/*"],
-      "@pocket/telemetry-service": ["./packages/telemetry-service/src/index.ts"],
-      "@pocket/telemetry-service/*": ["./packages/telemetry-service/src/*"],
-      "@pocket/mqtt-broker": ["./packages/mqtt-broker/src/index.ts"],
-      "@pocket/mqtt-broker/*": ["./packages/mqtt-broker/src/*"],
-      "@pocket/api": ["./packages/api/src/index.ts"],
-      "@pocket/api/*": ["./packages/api/src/*"]
+      "@pocket-mqtt/core": ["./packages/core/src/index.ts"],
+      "@pocket-mqtt/core/*": ["./packages/core/src/*"],
+      "@pocket-mqtt/db": ["./packages/db/src/index.ts"],
+      "@pocket-mqtt/db/*": ["./packages/db/src/*"],
+      "@pocket-mqtt/telemetry-service": ["./packages/telemetry-service/src/index.ts"],
+      "@pocket-mqtt/telemetry-service/*": ["./packages/telemetry-service/src/*"],
+      "@pocket-mqtt/mqtt-broker": ["./packages/mqtt-broker/src/index.ts"],
+      "@pocket-mqtt/mqtt-broker/*": ["./packages/mqtt-broker/src/*"],
+      "@pocket-mqtt/api": ["./packages/api/src/index.ts"],
+      "@pocket-mqtt/api/*": ["./packages/api/src/*"]
     }
   },
   "exclude": ["node_modules", "dist", "**/dist", "**/*.test.ts"]

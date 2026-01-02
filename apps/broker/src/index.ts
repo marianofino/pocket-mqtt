@@ -7,9 +7,9 @@
  */
 
 import 'dotenv/config';
-import { MQTTServer } from '@pocket/mqtt-broker';
-import { TelemetryService } from '@pocket/telemetry-service';
-import { disconnectDb } from '@pocket/db';
+import { MQTTServer } from '@pocket-mqtt/mqtt-broker';
+import { TelemetryService } from '@pocket-mqtt/telemetry-service';
+import { disconnectDb } from '@pocket-mqtt/db';
 
 const maxPayloadSize = 64 * 1024; // 64KB max payload size
 

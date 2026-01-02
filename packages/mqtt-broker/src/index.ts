@@ -1,5 +1,5 @@
 /**
- * @pocket/mqtt-broker - MQTT broker library with authentication hooks
+ * @pocket-mqtt/mqtt-broker - MQTT broker library with authentication hooks
  */
 
 export * from './mqtt-server.js';

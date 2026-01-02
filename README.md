@@ -93,7 +93,7 @@ pnpm dev:broker
 pnpm build
 
 # Build specific package
-pnpm --filter @pocket/db build
+pnpm --filter @pocket-mqtt/db build
 ```
 
 ### Production
@@ -116,7 +116,7 @@ pnpm start:broker
 pnpm test
 
 # Run tests in specific package
-pnpm --filter @pocket/db test
+pnpm --filter @pocket-mqtt/db test
 
 # Run tests in watch mode
 pnpm test:watch
@@ -127,32 +127,32 @@ pnpm test:coverage
 
 ## Packages
 
-### @pocket/core
+### @pocket-mqtt/core
 Core utilities, types, and validation schemas used across all packages.
 - Token generation
 - Tenant utilities
 - MQTT payload validation (Zod schemas)
 
-### @pocket/db
+### @pocket-mqtt/db
 Database layer with Drizzle ORM support for SQLite and PostgreSQL.
 - Schema definitions (SQLite and PostgreSQL)
 - Repository pattern implementations
 - Database connection management
 - Migrations via Drizzle Kit
 
-### @pocket/telemetry-service
+### @pocket-mqtt/telemetry-service
 Telemetry buffering and batch persistence service.
 - In-memory message buffering
 - Automatic flushing (every 2s or 100 messages)
 - High-throughput capable (>1000 msg/min)
 
-### @pocket/mqtt-broker
+### @pocket-mqtt/mqtt-broker
 MQTT broker library based on Aedes with authentication hooks.
 - Device token authentication
 - MQTT publish handlers
 - Reusable broker configuration
 
-### @pocket/api
+### @pocket-mqtt/api
 Fastify-based REST API with plugins and routes.
 - JWT authentication
 - Telemetry endpoints
@@ -162,14 +162,14 @@ Fastify-based REST API with plugins and routes.
 
 ## Apps
 
-### @pocket/app-api
+### @pocket-mqtt/app-api
 Full-featured REST API server with telemetry service.
 - Exposes REST endpoints on port 3000
 - Includes all services (Device, Tenant, User, Telemetry)
 - JWT-based authentication
 - Swagger/OpenAPI support (future)
 
-### @pocket/app-broker
+### @pocket-mqtt/app-broker
 Standalone MQTT broker for MQTT→DB ingestion without REST API.
 - MQTT broker on port 1883
 - Direct telemetry persistence
@@ -200,10 +200,10 @@ pnpm dev:broker  # Broker only
 You can import individual packages in your own projects:
 
 ```typescript
-import { TelemetryService } from '@pocket/telemetry-service';
-import { MQTTServer } from '@pocket/mqtt-broker';
-import { APIServer } from '@pocket/api';
-import { getDbClient } from '@pocket/db';
+import { TelemetryService } from '@pocket-mqtt/telemetry-service';
+import { MQTTServer } from '@pocket-mqtt/mqtt-broker';
+import { APIServer } from '@pocket-mqtt/api';
+import { getDbClient } from '@pocket-mqtt/db';
 ```
 
 ## API Endpoints

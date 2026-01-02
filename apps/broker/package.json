@@ -1,5 +1,5 @@
 {
-  "name": "@pocket/app-broker",
+  "name": "@pocket-mqtt/app-broker",
   "version": "1.0.0",
   "description": "PocketMQTT MQTT broker executable (MQTT→DB without REST)",
   "type": "module",
@@ -15,10 +15,10 @@
   "keywords": ["pocket-mqtt", "broker", "mqtt", "executable"],
   "license": "ISC",
   "dependencies": {
-    "@pocket/core": "workspace:*",
-    "@pocket/db": "workspace:*",
-    "@pocket/mqtt-broker": "workspace:*",
-    "@pocket/telemetry-service": "workspace:*",
+    "@pocket-mqtt/core": "workspace:*",
+    "@pocket-mqtt/db": "workspace:*",
+    "@pocket-mqtt/mqtt-broker": "workspace:*",
+    "@pocket-mqtt/telemetry-service": "workspace:*",
     "dotenv": "^17.2.3"
   },
   "devDependencies": {

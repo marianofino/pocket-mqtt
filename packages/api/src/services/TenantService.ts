@@ -1,6 +1,6 @@
-import { createTenantRepository } from '@pocket/db';
-import type { TenantRepository, Tenant, NewTenant } from '@pocket/db';
-import { validateTenantToken, generateTenantApiKey, validateTenantNameFormat } from '@pocket/core';
+import { createTenantRepository } from '@pocket-mqtt/db';
+import type { TenantRepository, Tenant, NewTenant } from '@pocket-mqtt/db';
+import { validateTenantToken, generateTenantApiKey, validateTenantNameFormat } from '@pocket-mqtt/core';
 import type { FastifyBaseLogger } from 'fastify';
 
 /**

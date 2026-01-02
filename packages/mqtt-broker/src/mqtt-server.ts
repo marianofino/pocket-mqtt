@@ -1,7 +1,7 @@
 import Aedes from 'aedes';
 import { createServer } from 'net';
 import type { Server as NetServer } from 'net';
-import type { TelemetryService } from '@pocket/telemetry-service';
+import type { TelemetryService } from '@pocket-mqtt/telemetry-service';
 import { setupMQTTAuthentication } from './authentication.js';
 import { setupMQTTHandlers } from './handlers.js';
 
