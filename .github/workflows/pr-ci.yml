@@ -35,7 +35,7 @@ jobs:
       - name: Prepare SQLite schema
         run: |
           rm -f ./dev.db
-          pnpm dlx drizzle-kit push --config drizzle.config.ts
+          pnpm exec drizzle-kit push --config drizzle.config.ts
         env:
           DATABASE_URL: file:./dev.db
       
