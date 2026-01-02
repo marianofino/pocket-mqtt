@@ -53,6 +53,8 @@ The platform uses Drizzle ORM with **SQLite (default)** or **PostgreSQL** for te
 pnpm db:push
 ```
 
+Default SQLite path (used by migrations and examples): `file:./packages/db/dev.db`
+
 ### PostgreSQL (Optional)
 ```bash
 # Set environment variables

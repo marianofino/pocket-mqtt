@@ -5,36 +5,38 @@ This directory contains example scripts to help you test and understand the secu
 ## Prerequisites
 
 1. Install dependencies:
-   ```bash
-   npm install
-   ```
+  ```bash
+  pnpm install
+  ```
 
 2. **Run database migrations** (IMPORTANT - do this first!):
   ```bash
-  npm run db:push
+  pnpm db:push
   ```
 
 3. Start the PocketMQTT server:
-   ```bash
-   npm run dev
-   ```
+  ```bash
+  pnpm dev:all
+  ```
 
 ## Quick Start
 
 ### 1. Setup Device Tokens
 
-First, create device tokens in the database for MQTT authentication:
+First, create the demo tenant and device tokens in the database for MQTT authentication. The script will automatically use the migrated SQLite file at `packages/db/dev.db` (overriding `.env`'s `DATABASE_URL=file:./dev.db` if present). Set `DATABASE_URL` explicitly if you want to target a different database.
 
 ```bash
 npx tsx examples/setup-device.ts
 ```
 
-**Note:** If you get a "no such table" error, make sure you ran `npm run db:push` first (see Prerequisites above).
+**Note:** If you get a "no such table" error, make sure you ran `pnpm db:push` first (see Prerequisites above).
 
 This will create three test devices:
-- `sensor-001` - For the MQTT publisher example
+- `sensor-001` - For the MQTT publisher example (tenant id = 1)
 - `subscriber-001` - For the MQTT subscriber example  
 - `sensor-002` - Additional sensor for testing
+
+It also creates a demo tenant named `demo` (id = 1) with an auto-generated API key that you can use for API-key auth flows.
 
 ### 2. Test REST API (with JWT)
 
@@ -46,7 +48,7 @@ npx tsx examples/rest-api-client.ts
 
 This will:
 - Login and get a JWT token
-- Post telemetry data using the token
+- Post telemetry data (for tenant id 1) using the token
 - Retrieve telemetry data
 - Test unauthorized access (should fail)
 - Check server health
@@ -70,7 +72,7 @@ The publisher will send temperature/humidity readings, and the subscriber will r
 ## Example Scripts
 
 ### `setup-device.ts`
-Creates device tokens in the database for MQTT authentication. Run this first before using MQTT examples.
+Creates the `demo` tenant plus device tokens in the database for MQTT authentication. Run this first before using MQTT examples.
 
 **Usage:**
 ```bash
@@ -82,7 +84,7 @@ Demonstrates REST API usage with JWT authentication.
 
 **Features:**
 - Login with credentials
-- Post telemetry data
+- Post telemetry data (with tenantId)
 - Retrieve telemetry data
 - Filter by topic
 - Test unauthorized access

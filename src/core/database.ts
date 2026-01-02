@@ -3,6 +3,7 @@ import { drizzle as drizzleSqlite } from 'drizzle-orm/better-sqlite3';
 import { drizzle as drizzlePostgres } from 'drizzle-orm/postgres-js';
 import Database from 'better-sqlite3';
 import postgres from 'postgres';
+import { fileURLToPath } from 'node:url';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schemaSqlite from './db/schema.js';
@@ -65,7 +66,8 @@ export function getDbClient(): DbClient {
     db = drizzlePostgres(pgClient, { schema: schemaPg });
   } else {
     // SQLite connection (default)
-    const dbPath = process.env.DATABASE_URL?.replace('file:', '').split('?')[0] || './dev.db';
+    const defaultSqlitePath = fileURLToPath(new URL('../dev.db', import.meta.url));
+    const dbPath = process.env.DATABASE_URL?.replace('file:', '').split('?')[0] || defaultSqlitePath;
     sqlite = new Database(dbPath);
     
     // Enable WAL mode for SQLite for concurrent I/O

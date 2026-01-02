@@ -6,7 +6,7 @@ This example demonstrates how to create and manage MQTT devices with auto-genera
 
 Start the PocketMQTT server:
 ```bash
-npm run dev
+pnpm dev:all
 ```
 
 ## Create a Device
