@@ -1,6 +1,7 @@
 PLAN.md
 node_modules/
 dist/
+**/dist/
 coverage/
 *.log
 .env
@@ -9,3 +10,7 @@ coverage/
 *.db-journal
 *.db-wal
 *.db-shm
+
+# pnpm
+.pnpm-store/
+pnpm-lock.yaml

@@ -1,0 +1,34 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "lib": ["ES2022"],
+    "moduleResolution": "node",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "@pocket/core": ["./packages/core/src/index.ts"],
+      "@pocket/core/*": ["./packages/core/src/*"],
+      "@pocket/db": ["./packages/db/src/index.ts"],
+      "@pocket/db/*": ["./packages/db/src/*"],
+      "@pocket/telemetry-service": ["./packages/telemetry-service/src/index.ts"],
+      "@pocket/telemetry-service/*": ["./packages/telemetry-service/src/*"],
+      "@pocket/mqtt-broker": ["./packages/mqtt-broker/src/index.ts"],
+      "@pocket/mqtt-broker/*": ["./packages/mqtt-broker/src/*"],
+      "@pocket/api": ["./packages/api/src/index.ts"],
+      "@pocket/api/*": ["./packages/api/src/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist", "**/dist", "**/*.test.ts"]
+}
