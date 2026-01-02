@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
-import type { TelemetryService } from '../services/TelemetryService.js';
+import type { TelemetryService } from '@pocket/telemetry-service';
 
 /**
  * Options for telemetry routes plugin

@@ -1,13 +1,12 @@
 import type Aedes from 'aedes';
 import type { AuthenticateError, Client, PublishPacket } from 'aedes';
-import { getDbClient, getDbAdapter } from '@pocket/db';
-import { deviceToken as deviceTokenSchema } from '@pocket/db';
-import { deviceToken as deviceTokenSchemaPg } from '@pocket/db';
+import { getDbClient, getDbAdapter, deviceToken as deviceTokenSchema, schemaPg } from '@pocket/db';
 import { eq } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import type * as schemaSqlite from '@pocket/db';
-import type * as schemaPg from '@pocket/db';
+
+const deviceTokenSchemaPg = schemaPg.deviceToken;
 
 type SqliteDbClient = BetterSQLite3Database<typeof schemaSqlite>;
 type PostgresDbClient = PostgresJsDatabase<typeof schemaPg>;

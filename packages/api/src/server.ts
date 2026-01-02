@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import fastifyJwt from '@fastify/jwt';
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import type { TelemetryService } from './services/TelemetryService.js';
+import type { TelemetryService } from '@pocket/telemetry-service';
 import type { DeviceService } from './services/DeviceService.js';
 import type { TenantService } from './services/TenantService.js';
 import type { UserService } from './services/UserService.js';
