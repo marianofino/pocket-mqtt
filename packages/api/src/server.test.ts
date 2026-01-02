@@ -53,4 +53,38 @@ describe('APIServer', () => {
 
     await server.stop();
   });
+
+  it('authenticateFlexible attaches tenant when a valid API key is provided', async () => {
+    const tenant = { id: 42, name: 'acme', apiKey: 'secret-key' } as any;
+    const tenantService = {
+      getTenantByApiKey: vi.fn().mockResolvedValue(tenant),
+      getTenantById: vi.fn()
+    } as any;
+
+    const server = new APIServer(
+      fakeTelemetry,
+      fakeDeviceService,
+      tenantService,
+      fakeUserService,
+      { jwtSecret: 'test-secret' }
+    );
+
+    const fastify = server.getFastify();
+
+    fastify.get('/protected', { onRequest: [fastify.authenticateFlexible] }, async (request) => {
+      return { tenantId: request.tenant?.id };
+    });
+
+    const response = await fastify.inject({
+      method: 'GET',
+      url: '/protected',
+      headers: { 'x-api-key': 'secret-key' }
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.payload)).toEqual({ tenantId: 42 });
+    expect(tenantService.getTenantByApiKey).toHaveBeenCalledWith('secret-key');
+
+    await server.stop();
+  });
 });
