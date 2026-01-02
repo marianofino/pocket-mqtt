@@ -9,6 +9,7 @@ import * as schemaSqlite from '@pocket/db';
 import type { DeviceToken, Tenant } from '@pocket/db';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { seedDevicesForTenant } from './setup-device.js';
+import { verifyDeviceToken } from '@pocket/core';
 
 const DEVICE_SEEDS = [
   {
@@ -59,7 +60,7 @@ function bootstrapDatabase(dbPath: string): { context: SqliteContext; dispose: (
       "id" integer PRIMARY KEY AUTOINCREMENT NOT NULL,
       "tenantId" integer NOT NULL,
       "deviceId" text NOT NULL UNIQUE,
-      "token" text NOT NULL UNIQUE,
+      "tokenHash" text NOT NULL,
       "name" text NOT NULL,
       "labels" text,
       "notes" text,
@@ -67,7 +68,6 @@ function bootstrapDatabase(dbPath: string): { context: SqliteContext; dispose: (
       "expiresAt" integer,
       CONSTRAINT "DeviceToken_tenantId_fk" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE
     );
-    CREATE INDEX "DeviceToken_token_idx" ON "DeviceToken" ("token");
     CREATE INDEX "DeviceToken_deviceId_idx" ON "DeviceToken" ("deviceId");
   `);
 
@@ -102,7 +102,7 @@ describe('setup-device seed helper', () => {
     dispose?.();
   });
 
-  it('creates a tenant and seeds device tokens with tenant linkage', async () => {
+  it('creates a tenant, hashes tokens, and seeds device tokens with tenant linkage', async () => {
     const result = await seedDevicesForTenant(context, TENANT_NAME, DEVICE_SEEDS);
 
     const tenants = (await context.db.select().from(schemaSqlite.tenant)) as Tenant[];
@@ -116,9 +116,22 @@ describe('setup-device seed helper', () => {
       .orderBy(desc(schemaSqlite.deviceToken.deviceId))) as DeviceToken[];
 
     expect(tokens).toHaveLength(DEVICE_SEEDS.length);
-    tokens.forEach((token) => {
-      expect(token.tenantId).toBe(tenantId);
+    tokens.forEach((tokenRow) => {
+      const seed = DEVICE_SEEDS.find((d) => d.deviceId === tokenRow.deviceId);
+      expect(seed).toBeDefined();
+      expect(tokenRow.tenantId).toBe(tenantId);
+      expect(tokenRow.tokenHash).toBeDefined();
+      expect(tokenRow.tokenHash).not.toBe(seed!.token);
     });
+
+    // Token hashes should verify against supplied plaintext tokens
+    await Promise.all(
+      tokens.map((tokenRow) => {
+        const seed = DEVICE_SEEDS.find((d) => d.deviceId === tokenRow.deviceId);
+        expect(seed).toBeDefined();
+        return expect(verifyDeviceToken(seed!.token, tokenRow.tokenHash)).resolves.toBe(true);
+      })
+    );
 
     expect(result.createdDevices.map((d: DeviceToken) => d.deviceId).sort()).toEqual(
       DEVICE_SEEDS.map((d) => d.deviceId).sort()

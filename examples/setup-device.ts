@@ -4,6 +4,7 @@
  * 
  * This script seeds a demo tenant and device tokens in the database
  * for testing MQTT authentication.
+ * Plaintext tokens are **not** stored; hashes are persisted for authentication.
  * 
  * Prerequisites:
  * 1. Run database migrations: pnpm db:push
@@ -19,7 +20,7 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { getDbAdapter, getDbClient, disconnectDb, schemaPg } from '@pocket/db';
 import * as sqliteSchema from '@pocket/db';
-import { generateTenantApiKey } from '@pocket/core';
+import { generateTenantApiKey, hashDeviceToken } from '@pocket/core';
 
 type DbContext =
   | {
@@ -127,6 +128,8 @@ const devices: DeviceSeed[] = [
   }
 ];
 
+const deviceSeedLookup = new Map(devices.map((device) => [device.deviceId, device]));
+
 console.log('=== Device Token Setup ===\n');
 
 async function checkDatabaseSetup(context: DbContext): Promise<boolean> {
@@ -232,10 +235,11 @@ async function createDevice(
   tenantId: number,
   seed: DeviceSeed
 ): Promise<DeviceTokenRow> {
+  const tokenHash = await hashDeviceToken(seed.token);
   const values = {
     tenantId,
     deviceId: seed.deviceId,
-    token: seed.token,
+    tokenHash,
     name: seed.name,
     labels: seed.labels ? JSON.stringify(seed.labels) : null,
     notes: seed.notes || null,
@@ -316,9 +320,13 @@ async function setupDevices(): Promise<void> {
 
     if (createdDevices.length > 0) {
       createdDevices.forEach((device) => {
+        const seed = deviceSeedLookup.get(device.deviceId);
         console.log(`✓ Created device: ${device.deviceId}`);
         console.log(`  Tenant ID: ${device.tenantId}`);
-        console.log(`  Token: ${device.token}`);
+        if (seed) {
+          console.log(`  Token: ${seed.token} (plaintext, not stored)`);
+        }
+        console.log(`  Token Hash: ${device.tokenHash}`);
         console.log(`  Labels: ${device.labels || 'None'}`);
         console.log(`  Notes: ${device.notes || 'None'}\n`);
       });
@@ -341,7 +349,8 @@ async function setupDevices(): Promise<void> {
       console.log(`${index + 1}. Device ID: ${device.deviceId}`);
       console.log(`   Tenant ID: ${device.tenantId}`);
       console.log(`   Name: ${device.name}`);
-      console.log(`   Token: ${device.token}`);
+      console.log(`   Token Hash: ${device.tokenHash}`);
+      console.log('   Plaintext token: not stored (see seed input)');
       console.log(`   Labels: ${device.labels || 'None'}`);
       console.log(`   Notes: ${device.notes || 'None'}`);
       console.log(`   Created: ${device.createdAt}`);

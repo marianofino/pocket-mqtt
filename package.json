@@ -11,6 +11,7 @@
   "scripts": {
     "build": "pnpm -r build",
     "test": "pnpm -r test",
+    "test:examples": "vitest run examples/setup-device.test.ts",
     "test:watch": "pnpm -r --parallel test:watch",
     "test:coverage": "vitest run --coverage",
     "dev:api": "pnpm --filter @pocket/app-api dev",
@@ -21,7 +22,10 @@
     "db:migrate": "pnpm --filter @pocket/db db:migrate",
     "db:generate": "pnpm --filter @pocket/db db:generate",
     "db:studio": "pnpm --filter @pocket/db db:studio",
-    "db:push": "pnpm --filter @pocket/db db:push"
+    "db:push": "pnpm --filter @pocket/db db:push",
+    "db:reset": "pnpm db:reset:sqlite",
+    "db:reset:sqlite": "rm -f packages/db/dev.db && pnpm db:push",
+    "db:reset:pg": "psql \"$DATABASE_URL\" -c \"DROP SCHEMA public CASCADE; CREATE SCHEMA public;\" && pnpm db:push"
   },
   "keywords": [
     "mqtt",
