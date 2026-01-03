@@ -15,8 +15,17 @@
       "import": "./dist/*.js"
     }
   },
+  "files": [
+    "dist",
+    "package.json",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "scripts": {
     "build": "tsc",
+    "clean": "rm -rf dist *.tsbuildinfo",
     "test": "vitest run",
     "test:watch": "vitest"
   },

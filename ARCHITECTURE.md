@@ -76,7 +76,17 @@ apps/broker (uses mqtt-broker, telemetry-service, db, core)
 2. **Batching:** Flush buffer to DB every 2s or 100 messages via Repository Pattern.
 3. **API:** Fastify exposes `/telemetry`, `/devices`, `/tenants`, `/users` and `/auth` for history, management, and control.
 
-## 5. Key Decisions
+## 5. Drizzle ORM (Consolidated in db Package)
+
+All Drizzle ORM artifacts are consolidated in `packages/db/`:
+- **Schemas**: `src/db/schema.ts` (SQLite), `src/db/schema.pg.ts` (PostgreSQL)
+- **Configurations**: `drizzle.config.ts` (SQLite), `drizzle.config.pg.ts` (PostgreSQL)
+- **Migrations**: `drizzle/` (SQLite), `drizzle-pg/` (PostgreSQL)
+- **Management**: All Drizzle operations run through `pnpm --filter @pocket-mqtt/db` scripts
+
+This consolidation ensures a single source of truth for database schemas and migrations.
+
+## 6. Key Decisions
 
 - **Monorepo:** Organized as pnpm workspace with packages for reusability and apps for deployment.
 - **Multi-DB:** Use a Repository Pattern to abstract database calls. Supports SQLite (default) and PostgreSQL (via `DB_ADAPTER=postgres`).
@@ -87,7 +97,7 @@ apps/broker (uses mqtt-broker, telemetry-service, db, core)
 - **TypeScript:** Strict mode with composite project references for incremental builds.
 - **Path Aliases:** `@pocket-mqtt/*` aliases map to package source for clean imports across the monorepo.
 
-## 6. Repository Pattern
+## 7. Repository Pattern
 
 - **Interface:** `MessageRepository`, `DeviceRepository`, `TenantRepository`, and `UserRepository` define core operations.
 - **Implementations:**
@@ -97,7 +107,7 @@ apps/broker (uses mqtt-broker, telemetry-service, db, core)
 - **Adapter Selection:** Set `DB_ADAPTER=postgres` or `DB_ADAPTER=sqlite` (default).
 - **Location:** All repository code is in `packages/db/src/repositories/`
 
-## 7. Build and Development
+## 8. Build and Development
 
 - **Build:** `pnpm build` - Builds all packages and apps using TypeScript composite projects
 - **Dev:** `pnpm dev:all` - Runs both API and broker with hot reload using concurrently
@@ -133,7 +143,19 @@ The monorepo uses a unified configuration strategy to prevent config drift and e
   - Shared path aliases and test settings
   - Sequential test execution to avoid database conflicts
 
-## 8. Security Implementation
+## 9. Package Hygiene and Structure
+
+All packages follow consistent standards:
+- **ESM Only**: `"type": "module"` in all package.json files
+- **Exports**: Proper `main`, `types`, and `exports` fields for package consumers
+- **Files Field**: Explicit control over published content (dist, configs, README)
+- **Engines**: Node.js >=24.0.0 requirement across all packages
+- **Clean Scripts**: Individual and root-level clean commands for build artifacts
+- **Dependencies**: Only listed where used; workspace packages use `workspace:*` protocol
+- **Peer Dependencies**: Used for optional or consumer-provided dependencies (e.g., dotenv, zod)
+- **Documentation**: Each package has a focused README explaining purpose, usage, and dependencies
+
+## 10. Security Implementation
 
 ### MQTT Security (Device Token Authentication)
 
@@ -168,7 +190,7 @@ The monorepo uses a unified configuration strategy to prevent config drift and e
   - Expiration: 1 hour (configurable)
   - Algorithm: HS256 (default)
 
-## 9. Device Management
+## 11. Device Management
 
 - **Auto-Generated Tokens:** Each device gets a unique token (xxxx-yyyy-zzzz format, 14 chars)
   - Uses cryptographically secure random bytes (48 bits of entropy)

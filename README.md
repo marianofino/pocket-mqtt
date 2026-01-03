@@ -45,7 +45,7 @@ pocket-mqtt/
 
 ## Database Setup
 
-The platform uses Drizzle ORM with **SQLite (default)** or **PostgreSQL** for telemetry storage:
+The platform uses Drizzle ORM with **SQLite (default)** or **PostgreSQL** for telemetry storage. All Drizzle configurations and migrations are consolidated in the `packages/db/` package.
 
 ### SQLite (Default)
 ```bash
@@ -53,7 +53,7 @@ The platform uses Drizzle ORM with **SQLite (default)** or **PostgreSQL** for te
 pnpm db:push
 ```
 
-Default SQLite path (used by migrations and examples): `file:./packages/db/dev.db`
+Default SQLite path: `packages/db/dev.db`
 
 ### PostgreSQL (Optional)
 ```bash
@@ -64,11 +64,11 @@ export DATABASE_URL="postgresql://username:password@localhost:5432/pocket_mqtt"
 # Create database
 createdb pocket_mqtt
 
-# Apply PostgreSQL migrations (from packages/db)
+# Apply PostgreSQL migrations
 psql -d pocket_mqtt -f packages/db/drizzle-pg/0000_initial.sql
 ```
 
-See `packages/db/drizzle-pg/README.md` for detailed PostgreSQL setup instructions.
+All Drizzle operations are managed through the `@pocket-mqtt/db` package. See `packages/db/README.md` for detailed database setup.
 
 ## Development
 
@@ -94,6 +94,9 @@ pnpm build
 
 # Build specific package
 pnpm --filter @pocket-mqtt/db build
+
+# Clean all build artifacts
+pnpm clean
 ```
 
 ### Production
@@ -127,18 +130,25 @@ pnpm test:coverage
 
 ## Packages
 
+Each package follows consistent standards with proper `type: module`, `exports`, `files` field, and comprehensive READMEs. All packages use the `workspace:*` protocol for internal dependencies.
+
 ### @pocket-mqtt/core
 Core utilities, types, and validation schemas used across all packages.
 - Token generation
 - Tenant utilities
 - MQTT payload validation (Zod schemas)
+- **No internal dependencies** - foundation of the dependency tree
+
+See `packages/core/README.md` for detailed documentation.
 
 ### @pocket-mqtt/db
 Database layer with Drizzle ORM support for SQLite and PostgreSQL.
 - Schema definitions (SQLite and PostgreSQL)
 - Repository pattern implementations
 - Database connection management
-- Migrations via Drizzle Kit
+- **All Drizzle configurations and migrations consolidated here**
+
+See `packages/db/README.md` for detailed documentation.
 
 ### @pocket-mqtt/telemetry-service
 Telemetry buffering and batch persistence service.
@@ -146,11 +156,15 @@ Telemetry buffering and batch persistence service.
 - Automatic flushing (every 2s or 100 messages)
 - High-throughput capable (>1000 msg/min)
 
+See `packages/telemetry-service/README.md` for detailed documentation.
+
 ### @pocket-mqtt/mqtt-broker
 MQTT broker library based on Aedes with authentication hooks.
 - Device token authentication
 - MQTT publish handlers
 - Reusable broker configuration
+
+See `packages/mqtt-broker/README.md` for detailed documentation.
 
 ### @pocket-mqtt/api
 Fastify-based REST API with plugins and routes.
@@ -159,6 +173,8 @@ Fastify-based REST API with plugins and routes.
 - Device management
 - Tenant management
 - User management
+
+See `packages/api/README.md` for detailed documentation.
 
 ## Apps
 
