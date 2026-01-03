@@ -60,7 +60,11 @@ describe('mqtt-publisher example', () => {
     });
 
     expect(client.publish).toHaveBeenCalledTimes(1);
-    const [topic, payload] = client.publish.mock.calls[0];
+    const call = client.publish.mock.calls[0];
+    if (!call) {
+      throw new Error('Expected publish to be called');
+    }
+    const [topic, payload] = call;
     expect(topic).toBe('sensors/demo');
     expect(JSON.parse(payload)).toEqual({ foo: 'bar' });
 
