@@ -35,32 +35,38 @@ export function validateTenantToken(name: string, token: string): boolean {
   if (parts.length !== 2) {
     return false;
   }
-  
+
   const [timestampStr, hash] = parts;
+
+  // Ensure both parts are present
+  if (!timestampStr || !hash) {
+    return false;
+  }
+
   const timestamp = Number.parseInt(timestampStr, 10);
-  
+
   // Validate timestamp is a valid number
   if (!Number.isFinite(timestamp) || timestamp < 0) {
     return false;
   }
-  
+
   // Check if token is expired (1 minute = 60000 milliseconds)
   const currentTime = Date.now();
   const tokenAge = currentTime - timestamp;
   if (tokenAge < 0 || tokenAge > 60000) {
     return false; // Token is expired or from the future
   }
-  
+
   const expectedHash = hashTenantNameWithTimestamp(name, timestamp);
-  
+
   // Use constant-time comparison to prevent timing attacks
   if (expectedHash.length !== hash.length) {
     return false;
   }
-  
+
   const expectedBuffer = Buffer.from(expectedHash, 'utf8');
   const tokenBuffer = Buffer.from(hash, 'utf8');
-  
+
   try {
     return timingSafeEqual(expectedBuffer, tokenBuffer);
   } catch {
