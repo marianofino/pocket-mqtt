@@ -34,10 +34,10 @@ jobs:
       
       - name: Prepare SQLite schema
         run: |
-          rm -f ./dev.db
+          rm -f ./packages/db/dev.db
           pnpm exec drizzle-kit push --config drizzle.config.ts
         env:
-          DATABASE_URL: file:./dev.db
+          DATABASE_URL: file:./packages/db/dev.db
       
       - name: Run tests
         run: pnpm test
