@@ -40,6 +40,7 @@
   "dependencies": {
     "@pocket-mqtt/core": "workspace:*",
     "better-sqlite3": "^12.5.0",
+    "dotenv": "^17.2.0",
     "drizzle-orm": "^0.45.1",
     "pg": "^8.16.3",
     "postgres": "^3.4.7"
@@ -51,13 +52,5 @@
     "drizzle-kit": "^0.31.8",
     "typescript": "^5.9.3",
     "vitest": "^4.0.16"
-  },
-  "peerDependencies": {
-    "dotenv": "^17.2.0"
-  },
-  "peerDependenciesMeta": {
-    "dotenv": {
-      "optional": true
-    }
   }
 }
