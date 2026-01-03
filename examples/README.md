@@ -1,223 +1,65 @@
 # PocketMQTT Examples
 
-This directory contains example scripts to help you test and understand the security features of PocketMQTT.
+Practical scripts for exercising the REST API, MQTT broker, and device lifecycle.
 
-## Prerequisites
-
-1. Install dependencies:
-  ```bash
-  pnpm install
-  ```
-
-2. **Run database migrations** (IMPORTANT - do this first!):
-  ```bash
-  pnpm db:push
-  ```
-
-3. Start the PocketMQTT server:
-  ```bash
-  pnpm dev:all
-  ```
-
-## Quick Start
-
-### 1. Setup Device Tokens
-
-First, create the demo tenant and device tokens in the database for MQTT authentication. The script will automatically use the migrated SQLite file at `packages/db/dev.db` (overriding `.env`'s `DATABASE_URL=file:./dev.db` if present). Set `DATABASE_URL` explicitly if you want to target a different database.
+## Prereqs (do once)
 
 ```bash
-npx tsx examples/setup-device.ts
+pnpm install
+pnpm db:push
+pnpm dev:all   # keep running in another terminal
 ```
 
-**Note:** If you get a "no such table" error, make sure you ran `pnpm db:push` first (see Prerequisites above).
+## Scripts
 
-This will create three test devices:
-- `sensor-001` - For the MQTT publisher example (tenant id = 1)
-- `subscriber-001` - For the MQTT subscriber example  
-- `sensor-002` - Additional sensor for testing
+- **Setup demo data:** `npx tsx examples/setup-device.ts` (creates demo tenant + tokens: `sensor-001`, `subscriber-001`, `sensor-002`).
+- **REST client:** `npx tsx examples/rest-api-client.ts` (login, post telemetry, fetch telemetry, unauthorized check, health check).
+- **MQTT:**
+  - Subscriber: `npx tsx examples/mqtt-subscriber.ts`
+  - Publisher: `npx tsx examples/mqtt-publisher.ts`
 
-It also creates a demo tenant named `demo` (id = 1) with an auto-generated API key that you can use for API-key auth flows.
+## Device lifecycle (API + MQTT)
 
-### 2. Test REST API (with JWT)
-
-Run the REST API client to test JWT authentication:
-
-```bash
-npx tsx examples/rest-api-client.ts
-```
-
-This will:
-- Login and get a JWT token
-- Post telemetry data (for tenant id 1) using the token
-- Retrieve telemetry data
-- Test unauthorized access (should fail)
-- Check server health
-
-### 3. Test MQTT Publisher (with Device Token)
-
-In one terminal, start the subscriber:
+1) **Create device (JWT required)**
 
 ```bash
-npx tsx examples/mqtt-subscriber.ts
-```
-
-In another terminal, run the publisher:
-
-```bash
-npx tsx examples/mqtt-publisher.ts
-```
-
-The publisher will send temperature/humidity readings, and the subscriber will receive them in real-time.
-
-## Example Scripts
-
-### `setup-device.ts`
-Creates the `demo` tenant plus device tokens in the database for MQTT authentication. Run this first before using MQTT examples.
-
-**Usage:**
-```bash
-npx tsx examples/setup-device.ts
-```
-
-### `rest-api-client.ts`
-Demonstrates REST API usage with JWT authentication.
-
-**Features:**
-- Login with credentials
-- Post telemetry data (with tenantId)
-- Retrieve telemetry data
-- Filter by topic
-- Test unauthorized access
-
-**Usage:**
-```bash
-npx tsx examples/rest-api-client.ts
-```
-
-### `mqtt-publisher.ts`
-Publishes MQTT messages with device token authentication.
-
-**Configuration:**
-- Device ID: `sensor-001`
-- Token: `my-secure-device-token-123`
-- Topic: `sensors/temperature`
-
-**Usage:**
-```bash
-npx tsx examples/mqtt-publisher.ts
-```
-
-### `mqtt-subscriber.ts`
-Subscribes to MQTT topics with device token authentication.
-
-**Configuration:**
-- Device ID: `subscriber-001`
-- Token: `subscriber-token-456`
-- Topics: `sensors/#`, `devices/+/status`
-
-**Usage:**
-```bash
-npx tsx examples/mqtt-subscriber.ts
-```
-
-## Security Testing
-
-### Test Authentication Failures
-
-#### MQTT without credentials:
-```bash
-# This should fail to connect
-mqtt pub -h localhost -p 1883 -t test/topic -m "hello"
-```
-
-#### REST API without JWT:
-```bash
-# This should return 401 Unauthorized
-curl http://localhost:3000/api/v1/telemetry
-```
-
-### Test with Valid Credentials
-
-#### MQTT with device token:
-```bash
-mqtt pub -h localhost -p 1883 \
-  -u sensor-001 \
-  -P my-secure-device-token-123 \
-  -t sensors/test \
-  -m '{"value": 42}'
-```
-
-#### REST API with JWT:
-```bash
-# Get token
+# get token
 TOKEN=$(curl -s -X POST http://localhost:3000/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin123"}' \
-  | jq -r '.token')
+  -d '{"username":"admin","password":"admin123"}' | jq -r '.token')
 
-# Use token
-curl http://localhost:3000/api/v1/telemetry \
-  -H "Authorization: Bearer $TOKEN"
+curl -X POST http://localhost:3000/api/devices \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Temperature Sensor 1","labels":["sensor","temperature"]}'
 ```
 
-## Customization
+2) **Use the device over MQTT**
 
-### Create Your Own Device
-
-Edit `setup-device.ts` to add your own devices:
-
-```typescript
-const devices = [
-  {
-    deviceId: 'my-device',
-    token: 'my-secure-token',
-    name: 'My Custom Device',
-    labels: ['custom', 'test'],
-    notes: 'My custom device for testing'
-  }
-];
+```
+username = deviceId
+password = deviceToken
+broker   = mqtt://localhost:1883
 ```
 
-Then update the publisher/subscriber scripts with your device credentials.
+3) **Manage devices**
 
-### Change API Credentials
+- List: `curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/api/devices`
+- Get one: `curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/api/devices/:id`
+- Regenerate token: `curl -X POST -H "Authorization: Bearer $TOKEN" http://localhost:3000/api/devices/:id/regenerate-token`
+- Update labels/notes: `PATCH /api/devices/:id`
+- Delete: `DELETE /api/devices/:id`
 
-Set environment variables:
+## Security spot-checks
 
-```bash
-export ADMIN_USERNAME=myuser
-export ADMIN_PASSWORD=mypassword
-export JWT_SECRET=my-secret-key
-
-npm run dev
-```
+- MQTT without creds should fail to connect.
+- REST without JWT should return 401.
+- With valid JWT, `/api/v1/telemetry` should succeed.
 
 ## Troubleshooting
 
-### "no such table: DeviceToken" Error
-This means the database migrations haven't been run yet. Fix it with:
-```bash
-npm run db:push
-```
-Then run the setup script again.
+- "no such table": rerun `pnpm db:push`, then `npx tsx examples/setup-device.ts`.
+- MQTT refused: ensure `pnpm dev:all` is running; verify device token; check username/password order.
+- REST 401: refresh JWT, ensure `Authorization: Bearer <token>` header.
 
-### MQTT Connection Refused
-- Check that the server is running (`npm run dev`)
-- Verify the device token exists in the database
-- Ensure credentials match: `username = deviceId`, `password = token`
-
-### REST API 401 Unauthorized
-- Verify you're using a valid JWT token
-- Check token hasn't expired (default: 1 hour)
-- Ensure you're using the `Authorization: Bearer <token>` header
-
-### Database Errors
-- Run migrations: `npm run db:push`
-- (Optional) Inspect schema: `npm run db:studio`
-- Check database file permissions
-
-## Next Steps
-
-- Explore the test files in `src/tests/security.test.ts` for more examples
-- Read the [ARCHITECTURE.md](../ARCHITECTURE.md) for security implementation details
-- Check the main [README.md](../README.md) for API documentation
+See `ARCHITECTURE.md` for security details and the root `README.md` for a repo overview.

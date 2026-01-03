@@ -7,44 +7,10 @@ settings:
 importers:
 
   .:
-    dependencies:
-      '@fastify/jwt':
-        specifier: ^10.0.0
-        version: 10.0.0
-      aedes:
-        specifier: ^0.51.3
-        version: 0.51.3
-      better-sqlite3:
-        specifier: ^12.5.0
-        version: 12.5.0
-      dotenv:
-        specifier: ^17.2.3
-        version: 17.2.3
-      drizzle-orm:
-        specifier: ^0.45.1
-        version: 0.45.1(@types/better-sqlite3@7.6.13)(@types/pg@8.16.0)(better-sqlite3@12.5.0)(pg@8.16.3)(postgres@3.4.7)
-      fastify:
-        specifier: ^5.6.2
-        version: 5.6.2
-      pg:
-        specifier: ^8.16.3
-        version: 8.16.3
-      postgres:
-        specifier: ^3.4.7
-        version: 3.4.7
-      zod:
-        specifier: ^4.2.1
-        version: 4.3.4
     devDependencies:
-      '@types/better-sqlite3':
-        specifier: ^7.6.13
-        version: 7.6.13
       '@types/node':
         specifier: ^25.0.3
         version: 25.0.3
-      '@types/pg':
-        specifier: ^8.16.0
-        version: 8.16.0
       '@typescript-eslint/eslint-plugin':
         specifier: ^7.0.0
         version: 7.18.0(@typescript-eslint/parser@7.18.0(eslint@8.57.1)(typescript@5.9.3))(eslint@8.57.1)(typescript@5.9.3)
@@ -57,15 +23,9 @@ importers:
       concurrently:
         specifier: ^9.1.2
         version: 9.2.1
-      drizzle-kit:
-        specifier: ^0.31.8
-        version: 0.31.8
       eslint:
         specifier: ^8.57.0
         version: 8.57.1
-      mqtt:
-        specifier: ^5.14.1
-        version: 5.14.1
       prettier:
         specifier: ^3.0.0
         version: 3.7.4
@@ -107,7 +67,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  apps/broker:
+  apps/mqtt-broker:
     dependencies:
       '@pocket-mqtt/core':
         specifier: workspace:*
@@ -134,6 +94,28 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+
+  examples:
+    dependencies:
+      better-sqlite3:
+        specifier: ^12.5.0
+        version: 12.5.0
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.1(@types/better-sqlite3@7.6.13)(@types/pg@8.16.0)(better-sqlite3@12.5.0)(pg@8.16.3)(postgres@3.4.7)
+      mqtt:
+        specifier: ^5.14.1
+        version: 5.14.1
+    devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^7.6.13
+        version: 7.6.13
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
+      vitest:
+        specifier: ^4.0.16
+        version: 4.0.16(@types/node@25.0.3)(tsx@4.21.0)
 
   packages/api:
     dependencies:
@@ -190,6 +172,9 @@ importers:
       better-sqlite3:
         specifier: ^12.5.0
         version: 12.5.0
+      dotenv:
+        specifier: ^17.2.0
+        version: 17.2.3
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.1(@types/better-sqlite3@7.6.13)(@types/pg@8.16.0)(better-sqlite3@12.5.0)(pg@8.16.3)(postgres@3.4.7)
@@ -233,6 +218,9 @@ importers:
       aedes:
         specifier: ^0.51.3
         version: 0.51.3
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.1(@types/better-sqlite3@7.6.13)(@types/pg@8.16.0)(better-sqlite3@12.5.0)(pg@8.16.3)(postgres@3.4.7)
     devDependencies:
       '@types/node':
         specifier: ^25.0.3

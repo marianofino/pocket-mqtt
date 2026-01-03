@@ -7,8 +7,16 @@
   "bin": {
     "pocket-api": "./dist/index.js"
   },
+  "files": [
+    "dist",
+    "package.json"
+  ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "scripts": {
     "build": "tsc",
+    "clean": "rm -rf dist *.tsbuildinfo",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js"
   },

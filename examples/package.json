@@ -1,0 +1,23 @@
+{
+  "name": "@pocket-mqtt/examples",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Developer examples for PocketMQTT (REST + MQTT demos and seeds)",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "mqtt": "^5.14.1",
+    "better-sqlite3": "^12.5.0",
+    "drizzle-orm": "^0.45.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "tsx": "^4.21.0",
+    "vitest": "^4.0.16"
+  }
+}

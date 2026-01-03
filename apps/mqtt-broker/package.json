@@ -1,14 +1,22 @@
 {
-  "name": "@pocket-mqtt/app-broker",
+  "name": "@pocket-mqtt/app-mqtt-broker",
   "version": "1.0.0",
   "description": "PocketMQTT MQTT broker executable (MQTT→DB without REST)",
   "type": "module",
   "main": "./dist/index.js",
   "bin": {
-    "pocket-broker": "./dist/index.js"
+    "pocket-mqtt-broker": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "package.json"
+  ],
+  "engines": {
+    "node": ">=24.0.0"
   },
   "scripts": {
     "build": "tsc",
+    "clean": "rm -rf dist *.tsbuildinfo",
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js"
   },
