@@ -14,11 +14,11 @@ type PostgresDbClient = PostgresJsDatabase<typeof schemaPg>;
 
 /**
  * Setup MQTT authentication hooks for device token validation.
- * Implements device-token based authentication as per ARCHITECTURE.md.
+ * Implements single-credential device-token authentication as per ARCHITECTURE.md.
  * 
- * Supports two authentication modes:
- * 1. Legacy mode: username=deviceId, password=token (backward compatible)
- * 2. Single-credential mode: username=token, no password (new feature)
+ * Devices authenticate using only their token as the username (no password required).
+ * The token is used to look up the device via HMAC-based tokenLookup, and then
+ * verified against the stored tokenHash using constant-time comparison.
  * 
  * Security: Tokens are verified against hashed values stored in the database
  * using constant-time comparison to prevent timing attacks.
@@ -36,75 +36,45 @@ export function setupMQTTAuthentication(aedes: Aedes): void {
       return;
     }
 
+    // Reject connections with password (single-credential mode only)
+    if (password) {
+      callback(null, false);
+      return;
+    }
+
     try {
+      const token = username;
+      const tokenLookup = generateTokenLookup(token);
+
+      // Look up device by tokenLookup
       let deviceTokenRecord: { deviceId: string; tokenHash: string; tokenLookup: string; expiresAt: Date | null; tenantId: number } | undefined;
-
-      // Single-credential mode: username is token, no password
-      if (!password) {
-        const token = username;
-        const tokenLookup = generateTokenLookup(token);
-
-        // Look up device by tokenLookup
-        if (adapter === 'postgres') {
-          const db = getDbClient() as PostgresDbClient;
-          const results = await db.select()
-            .from(deviceTokenSchemaPg)
-            .where(eq(deviceTokenSchemaPg.tokenLookup, tokenLookup))
-            .limit(1);
-          deviceTokenRecord = results[0] as { deviceId: string; tokenHash: string; tokenLookup: string; expiresAt: Date | null; tenantId: number } | undefined;
-        } else {
-          const db = getDbClient() as SqliteDbClient;
-          const results = await db.select()
-            .from(deviceTokenSchema)
-            .where(eq(deviceTokenSchema.tokenLookup, tokenLookup))
-            .limit(1);
-          deviceTokenRecord = results[0] as { deviceId: string; tokenHash: string; tokenLookup: string; expiresAt: Date | null; tenantId: number } | undefined;
-        }
-
-        if (!deviceTokenRecord) {
-          callback(null, false);
-          return;
-        }
-
-        // Verify token hash using constant-time comparison
-        const tokenValid = await verifyDeviceToken(token, deviceTokenRecord.tokenHash);
-        if (!tokenValid) {
-          callback(null, false);
-          return;
-        }
+      
+      if (adapter === 'postgres') {
+        const db = getDbClient() as PostgresDbClient;
+        const results = await db.select()
+          .from(deviceTokenSchemaPg)
+          .where(eq(deviceTokenSchemaPg.tokenLookup, tokenLookup))
+          .limit(1);
+        deviceTokenRecord = results[0] as { deviceId: string; tokenHash: string; tokenLookup: string; expiresAt: Date | null; tenantId: number } | undefined;
       } else {
-        // Legacy mode: username=deviceId, password=token
-        const deviceId = username;
-        const token = password.toString();
-        
-        // Look up device by deviceId (username) in database based on adapter
-        if (adapter === 'postgres') {
-          const db = getDbClient() as PostgresDbClient;
-          const results = await db.select()
-            .from(deviceTokenSchemaPg)
-            .where(eq(deviceTokenSchemaPg.deviceId, deviceId))
-            .limit(1);
-          deviceTokenRecord = results[0] as { deviceId: string; tokenHash: string; tokenLookup: string; expiresAt: Date | null; tenantId: number } | undefined;
-        } else {
-          const db = getDbClient() as SqliteDbClient;
-          const results = await db.select()
-            .from(deviceTokenSchema)
-            .where(eq(deviceTokenSchema.deviceId, deviceId))
-            .limit(1);
-          deviceTokenRecord = results[0] as { deviceId: string; tokenHash: string; tokenLookup: string; expiresAt: Date | null; tenantId: number } | undefined;
-        }
+        const db = getDbClient() as SqliteDbClient;
+        const results = await db.select()
+          .from(deviceTokenSchema)
+          .where(eq(deviceTokenSchema.tokenLookup, tokenLookup))
+          .limit(1);
+        deviceTokenRecord = results[0] as { deviceId: string; tokenHash: string; tokenLookup: string; expiresAt: Date | null; tenantId: number } | undefined;
+      }
 
-        if (!deviceTokenRecord) {
-          callback(null, false);
-          return;
-        }
+      if (!deviceTokenRecord) {
+        callback(null, false);
+        return;
+      }
 
-        // Verify token hash using constant-time comparison
-        const tokenValid = await verifyDeviceToken(token, deviceTokenRecord.tokenHash);
-        if (!tokenValid) {
-          callback(null, false);
-          return;
-        }
+      // Verify token hash using constant-time comparison
+      const tokenValid = await verifyDeviceToken(token, deviceTokenRecord.tokenHash);
+      if (!tokenValid) {
+        callback(null, false);
+        return;
       }
 
       // Check if token is expired

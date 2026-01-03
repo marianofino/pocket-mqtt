@@ -45,9 +45,7 @@ pnpm start:mqtt-broker
 ## API + MQTT
 
 - REST endpoints: see `packages/api/README.md` for the endpoint list.
-- MQTT Authentication: Two modes supported:
-  - **Legacy:** `username=deviceId`, `password=deviceToken`
-  - **Single-Credential (New):** `username=deviceToken` (no password) - simpler provisioning!
+- MQTT Authentication: Connect using `username=deviceToken` (no password required) - simple and secure!
 
 ## Architecture & decisions
 

@@ -88,19 +88,16 @@ All packages follow consistent standards:
 ### MQTT Security (Device Token Authentication)
 
 - **Authentication Hook:** Validates device tokens on MQTT connection (implemented in `src/broker/authentication.ts`)
-  - **Two Authentication Modes:**
-    1. **Legacy Mode:** `username=deviceId`, `password=token` (backward compatible)
-    2. **Single-Credential Mode:** `username=token`, no password (new feature)
+  - **Single-Credential Authentication:** Devices connect using `username=token` (no password required)
   - Tokens are auto-generated short unique identifiers (format: xxxx-yyyy-zzzz)
   - Tokens are stored in the `DeviceToken` table with salted hash (scrypt) and HMAC lookup key
   - **Token Storage:**
     - `tokenHash`: Salted scrypt hash for verification (prevents rainbow table attacks)
-    - `tokenLookup`: HMAC-SHA256(secret_key, token) for efficient device lookup in single-credential mode
+    - `tokenLookup`: HMAC-SHA256(secret_key, token) for efficient device lookup
     - `TOKEN_LOOKUP_SECRET` environment variable is **required in production** for security
   - Expired tokens are automatically rejected
   - Unauthorized connections are refused
   - **Internal DeviceId:** Stable identifier maintained for audit logs, ACLs, and topic resolution
-  - **Migration Note:** Existing devices from pre-tokenLookup versions need token regeneration to use single-credential mode
 
 - **Authorization Hook:** Controls publish permissions
   - Currently allows all authenticated devices to publish

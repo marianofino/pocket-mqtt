@@ -11,8 +11,8 @@ const TEST_DB_PATH = resolve('mqtt-auth-test.db');
 const TEST_DB_URL = `file:${TEST_DB_PATH}`;
 
 /**
- * Integration tests for MQTT authentication modes.
- * Tests both legacy (deviceId+token) and new (token-only) authentication.
+ * Integration tests for MQTT authentication.
+ * Tests single-credential (token-only) authentication.
  */
 describe('MQTT Authentication Integration', () => {
   let mqttServer: MQTTServer;
@@ -115,74 +115,6 @@ describe('MQTT Authentication Integration', () => {
       unlinkSync(TEST_DB_PATH);
     }
     vi.unstubAllEnvs();
-  });
-
-  describe('Legacy Authentication (deviceId + token)', () => {
-    it('should authenticate with valid deviceId as username and token as password', () => {
-      return new Promise<void>((resolve, reject) => {
-        const client = mqtt.connect(`mqtt://localhost:${port}`, {
-          clientId: 'test-client-legacy',
-          username: testDevice.deviceId,
-          password: testDevice.token,
-          clean: true,
-          reconnectPeriod: 0,
-        });
-
-        client.on('connect', () => {
-          client.end();
-          resolve();
-        });
-
-        client.on('error', (err) => {
-          client.end();
-          reject(new Error(`Connection failed: ${err.message}`));
-        });
-      });
-    });
-
-    it('should reject invalid deviceId', () => {
-      return new Promise<void>((resolve, reject) => {
-        const client = mqtt.connect(`mqtt://localhost:${port}`, {
-          clientId: 'test-client-invalid-deviceid',
-          username: 'invalid-device-id',
-          password: testDevice.token,
-          clean: true,
-          reconnectPeriod: 0,
-        });
-
-        client.on('connect', () => {
-          client.end();
-          reject(new Error('Should not have connected with invalid deviceId'));
-        });
-
-        client.on('error', () => {
-          client.end();
-          resolve();
-        });
-      });
-    });
-
-    it('should reject invalid token', () => {
-      return new Promise<void>((resolve, reject) => {
-        const client = mqtt.connect(`mqtt://localhost:${port}`, {
-          clientId: 'test-client-invalid-token',
-          username: testDevice.deviceId,
-          password: 'invalid-token',
-          clean: true,
-          reconnectPeriod: 0,
-        });
-
-        client.on('connect', () => {
-          client.end();
-          reject(new Error('Should not have connected with invalid token'));
-        });
-
-        client.on('error', () => {
-          client.end();
-          resolve();
-        });
-      });
-    });
   });
 
   describe('Single-Credential Authentication (token only)', () => {

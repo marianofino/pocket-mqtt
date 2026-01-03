@@ -3,7 +3,7 @@
  * MQTT Subscriber Example
  * 
  * This example demonstrates how to subscribe to topics on the PocketMQTT broker
- * using device token authentication.
+ * using single-credential token authentication.
  * 
  * Prerequisites:
  * 1. Start the PocketMQTT server: npm run dev
@@ -13,8 +13,7 @@
 
 import { connect } from 'mqtt';
 
-// Device credentials - these should match a record in your DeviceToken table
-const DEVICE_ID = 'subscriber-001';
+// Device token - this should match a token in your DeviceToken table
 const DEVICE_TOKEN = 'subscriber-token-456';
 
 // MQTT broker connection settings
@@ -29,18 +28,18 @@ const TOPICS = [
 
 console.log('=== MQTT Subscriber Example ===\n');
 
-// Connect to MQTT broker with authentication
+// Connect to MQTT broker with single-credential authentication
 const client = connect(`mqtt://${MQTT_HOST}:${MQTT_PORT}`, {
-  clientId: DEVICE_ID,
-  username: DEVICE_ID,
-  password: DEVICE_TOKEN,
+  clientId: `subscriber-${Date.now()}`,
+  username: DEVICE_TOKEN,
+  // No password - single-credential mode
   clean: true,
   reconnectPeriod: 1000,
 });
 
 client.on('connect', () => {
   console.log('✓ Connected to MQTT broker');
-  console.log(`  Device ID: ${DEVICE_ID}\n`);
+  console.log(`  Token: ${DEVICE_TOKEN}\n`);
   
   // Subscribe to topics
   console.log('Subscribing to topics:');
@@ -76,7 +75,7 @@ client.on('error', (err) => {
   console.log('\nTroubleshooting:');
   console.log('1. Make sure the PocketMQTT server is running (npm run dev)');
   console.log('2. Verify the device token exists in the database');
-  console.log('3. Check that DEVICE_ID and DEVICE_TOKEN match the database record\n');
+  console.log('3. Check that DEVICE_TOKEN matches a token in the database\n');
   process.exit(1);
 });
 

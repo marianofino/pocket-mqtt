@@ -33,7 +33,7 @@ curl -X POST http://localhost:3000/api/devices \
 
 Response includes `deviceId` and `token`.
 
-4) Connect over MQTT using `deviceId` as username and `token` as password (e.g., mqtt.js or paho). Broker: `mqtt://localhost:1883`.
+4) Connect over MQTT using the `token` as username (no password required). Broker: `mqtt://localhost:1883`.
 5) Manage devices via REST with the same JWT: list, get by id, regenerate token, update metadata, delete.
 
 ## Device lifecycle (API + MQTT)
@@ -55,8 +55,8 @@ curl -X POST http://localhost:3000/api/devices \
 2) **Use the device over MQTT**
 
 ```
-username = deviceId
-password = deviceToken
+username = deviceToken (from API response)
+password = (not required - leave empty)
 broker   = mqtt://localhost:1883
 ```
 
@@ -77,7 +77,7 @@ broker   = mqtt://localhost:1883
 ## Troubleshooting
 
 - "no such table": rerun `pnpm db:push`, then `npx tsx examples/setup-device.ts`.
-- MQTT refused: ensure `pnpm dev:all` is running; verify device token; check username/password order.
+- MQTT refused: ensure `pnpm dev:all` is running; verify device token exists in database.
 - REST 401: refresh JWT, ensure `Authorization: Bearer <token>` header.
 
 See `ARCHITECTURE.md` for security details and the root `README.md` for a repo overview.
