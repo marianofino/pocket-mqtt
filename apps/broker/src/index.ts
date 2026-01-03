@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * PocketMQTT Broker Executable
- * 
+ *
  * Starts the MQTT broker (MQTT→DB without REST).
  * This is a standalone MQTT broker that stores telemetry directly to the database.
  */
@@ -19,7 +19,7 @@ const telemetryService = new TelemetryService();
 // Initialize MQTT server
 const mqttServer = new MQTTServer(telemetryService, {
   port: process.env.MQTT_PORT ? parseInt(process.env.MQTT_PORT) : 1883,
-  maxPayloadSize
+  maxPayloadSize,
 });
 
 // Create a simple console logger for the broker
@@ -39,7 +39,7 @@ mqttServer.start(logger).catch((err) => {
 // Graceful shutdown
 const shutdown = async () => {
   console.log('\nShutting down MQTT broker...');
-  
+
   const errors: Error[] = [];
 
   // Stop telemetry service first (flushes any pending messages)
@@ -68,7 +68,7 @@ const shutdown = async () => {
     console.error('Errors occurred during shutdown:', errors);
     process.exit(1);
   }
-  
+
   process.exit(0);
 };
 
