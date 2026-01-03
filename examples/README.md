@@ -4,9 +4,10 @@ This directory contains example scripts to help you test and understand the secu
 
 ## Prerequisites
 
-1. Install dependencies:
+1. Install dependencies (workspace-aware):
   ```bash
   pnpm install
+  # or, if you only want the examples deps: pnpm install --filter @pocket-mqtt/examples
   ```
 
 2. **Run database migrations** (IMPORTANT - do this first!):

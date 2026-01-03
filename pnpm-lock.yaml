@@ -95,6 +95,28 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  examples:
+    dependencies:
+      better-sqlite3:
+        specifier: ^12.5.0
+        version: 12.5.0
+      drizzle-orm:
+        specifier: ^0.45.1
+        version: 0.45.1(@types/better-sqlite3@7.6.13)(@types/pg@8.16.0)(better-sqlite3@12.5.0)(pg@8.16.3)(postgres@3.4.7)
+      mqtt:
+        specifier: ^5.3.5
+        version: 5.14.1
+    devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^7.6.13
+        version: 7.6.13
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
+      vitest:
+        specifier: ^4.0.16
+        version: 4.0.16(@types/node@25.0.3)(tsx@4.21.0)
+
   packages/api:
     dependencies:
       '@fastify/jwt':
@@ -151,7 +173,7 @@ importers:
         specifier: ^12.5.0
         version: 12.5.0
       dotenv:
-        specifier: ^17.0.0
+        specifier: ^17.2.0
         version: 17.2.3
       drizzle-orm:
         specifier: ^0.45.1

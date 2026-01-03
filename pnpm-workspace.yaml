@@ -1,6 +1,7 @@
 packages:
   - packages/*
   - apps/*
+  - examples
   # Explicitly exclude build outputs and artifacts
   - '!**/dist'
   - '!**/coverage'
