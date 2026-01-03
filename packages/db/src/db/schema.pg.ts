@@ -60,6 +60,7 @@ export const deviceToken = pgTable('DeviceToken', {
   tenantId: integer('tenantId').notNull().references(() => tenant.id),
   deviceId: text('deviceId').notNull().unique(),
   tokenHash: text('tokenHash').notNull(), // Hashed token using scrypt
+  tokenLookup: text('tokenLookup').notNull().unique(), // HMAC-based lookup key for single-credential auth
   name: text('name').notNull(), // Device name for identification
   labels: text('labels'), // JSON array of labels for filtering/queries (optional)
   notes: text('notes'), // Free text field for comments/notes (optional)
@@ -68,6 +69,7 @@ export const deviceToken = pgTable('DeviceToken', {
 }, (table) => ({
   deviceIdIdx: index('DeviceToken_deviceId_idx').on(table.deviceId),
   tenantIdIdx: index('DeviceToken_tenantId_idx').on(table.tenantId),
+  tokenLookupIdx: index('DeviceToken_tokenLookup_idx').on(table.tokenLookup),
 }));
 
 export type Tenant = typeof tenant.$inferSelect;

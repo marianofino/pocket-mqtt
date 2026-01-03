@@ -40,6 +40,14 @@ export class PostgresDeviceRepository implements DeviceRepository {
     return results[0];
   }
 
+  async findByTokenLookup(tokenLookup: string): Promise<Device | undefined> {
+    const results = await this.db.select()
+      .from(deviceToken)
+      .where(eq(deviceToken.tokenLookup, tokenLookup))
+      .limit(1);
+    return results[0];
+  }
+
   async findMany(options?: { limit?: number; offset?: number }): Promise<Device[]> {
     const limit = options?.limit ?? 100;
     const offset = options?.offset ?? 0;

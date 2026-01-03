@@ -1,20 +1,15 @@
 import type Aedes from 'aedes';
 import type { AuthenticateError, Client, PublishPacket } from 'aedes';
-import { getDbClient, getDbAdapter, deviceToken as deviceTokenSchema, schemaPg } from '@pocket-mqtt/db';
-import { verifyDeviceToken } from '@pocket-mqtt/core';
-import { eq } from 'drizzle-orm';
-import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import type * as schemaSqlite from '@pocket-mqtt/db';
-
-const deviceTokenSchemaPg = schemaPg.deviceToken;
-
-type SqliteDbClient = BetterSQLite3Database<typeof schemaSqlite>;
-type PostgresDbClient = PostgresJsDatabase<typeof schemaPg>;
+import { createDeviceRepository } from '@pocket-mqtt/db';
+import { verifyDeviceToken, generateTokenLookup } from '@pocket-mqtt/core';
 
 /**
  * Setup MQTT authentication hooks for device token validation.
- * Implements device-token based authentication as per ARCHITECTURE.md.
+ * Implements single-credential device-token authentication as per ARCHITECTURE.md.
+ * 
+ * Devices authenticate using only their token as the username (no password required).
+ * The token is used to look up the device via HMAC-based tokenLookup, and then
+ * verified against the stored tokenHash using constant-time comparison.
  * 
  * Security: Tokens are verified against hashed values stored in the database
  * using constant-time comparison to prevent timing attacks.
@@ -22,36 +17,29 @@ type PostgresDbClient = PostgresJsDatabase<typeof schemaPg>;
  * @param aedes - Aedes MQTT broker instance
  */
 export function setupMQTTAuthentication(aedes: Aedes): void {
-  const adapter = getDbAdapter();
+  const deviceRepository = createDeviceRepository();
   
   // Authenticate hook - validates device tokens on connection
   aedes.authenticate = async (client: Client, username: string | undefined, password: Buffer | undefined, callback: (error: AuthenticateError | null, success: boolean) => void) => {
-    // Reject connections without credentials
-    if (!username || !password) {
+    // Reject connections without username
+    if (!username) {
+      callback(null, false);
+      return;
+    }
+
+    // Reject connections with password (single-credential mode only)
+    // This checks for both undefined/null passwords AND empty passwords
+    if (password !== undefined && password !== null) {
       callback(null, false);
       return;
     }
 
     try {
-      const token = password.toString();
-      
-      // Look up device by deviceId (username) in database based on adapter
-      let deviceTokenRecord: { deviceId: string; tokenHash: string; expiresAt: Date | null; tenantId: number } | undefined;
-      if (adapter === 'postgres') {
-        const db = getDbClient() as PostgresDbClient;
-        const results = await db.select()
-          .from(deviceTokenSchemaPg)
-          .where(eq(deviceTokenSchemaPg.deviceId, username))
-          .limit(1);
-        deviceTokenRecord = results[0];
-      } else {
-        const db = getDbClient() as SqliteDbClient;
-        const results = await db.select()
-          .from(deviceTokenSchema)
-          .where(eq(deviceTokenSchema.deviceId, username))
-          .limit(1);
-        deviceTokenRecord = results[0];
-      }
+      const token = username;
+      const tokenLookup = generateTokenLookup(token);
+
+      // Look up device by tokenLookup using repository pattern
+      const deviceTokenRecord = await deviceRepository.findByTokenLookup(tokenLookup);
 
       if (!deviceTokenRecord) {
         callback(null, false);
@@ -71,7 +59,8 @@ export function setupMQTTAuthentication(aedes: Aedes): void {
         return;
       }
 
-      // Attach tenantId to client for use in publish handler
+      // Attach deviceId and tenantId to client for use in audit logs, ACLs, and topic resolution
+      (client as any).deviceId = deviceTokenRecord.deviceId;
       (client as any).tenantId = deviceTokenRecord.tenantId;
 
       // Authentication successful

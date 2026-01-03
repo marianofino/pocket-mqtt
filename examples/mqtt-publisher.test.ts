@@ -40,7 +40,6 @@ describe('mqtt-publisher example', () => {
     const promise = publishExample({
       mqttHost: 'localhost',
       mqttPort: 1883,
-      deviceId: 'device-1',
       deviceToken: 'token-1',
       topic: 'sensors/demo',
       payload: { foo: 'bar' },
@@ -51,13 +50,16 @@ describe('mqtt-publisher example', () => {
 
     await promise;
 
-    expect(connectMock).toHaveBeenCalledWith('mqtt://localhost:1883', {
-      clientId: 'device-1',
-      username: 'device-1',
-      password: 'token-1',
+    expect(connectMock).toHaveBeenCalledWith('mqtt://localhost:1883', expect.objectContaining({
+      username: 'token-1',
       clean: true,
       reconnectPeriod: 0,
-    });
+    }));
+
+    // Verify clientId is dynamic (timestamp-based)
+    const callArgs = connectMock.mock.calls[0][1];
+    expect(callArgs.clientId).toMatch(/^publisher-\d+$/);
+    expect(callArgs.password).toBeUndefined();
 
     expect(client.publish).toHaveBeenCalledTimes(1);
     const call = client.publish.mock.calls[0];
@@ -82,7 +84,6 @@ describe('mqtt-publisher example', () => {
     const connectMock = vi.fn().mockReturnValue(client);
 
     const promise = publishExample({
-      deviceId: 'device-1',
       deviceToken: 'token-1',
       topic: 'sensors/demo',
       mqttConnect: connectMock,
