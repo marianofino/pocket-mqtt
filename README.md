@@ -45,7 +45,9 @@ pnpm start:mqtt-broker
 ## API + MQTT
 
 - REST endpoints: see `packages/api/README.md` for the endpoint list.
-- MQTT: connect to `mqtt://localhost:1883` using `username=deviceId`, `password=deviceToken`.
+- MQTT Authentication: Two modes supported:
+  - **Legacy:** `username=deviceId`, `password=deviceToken`
+  - **Single-Credential (New):** `username=deviceToken` (no password) - simpler provisioning!
 
 ## Architecture & decisions
 
@@ -53,7 +55,7 @@ See `ARCHITECTURE.md` for stack, dependency graph, data flow, performance rules,
 
 ## Examples
 
-Hands-on scripts live in `examples/` (REST client, MQTT publisher/subscriber, device setup). See `examples/README.md` for the flow.
+Hands-on scripts live in `examples/` (REST client, MQTT publisher/subscriber, device setup, single-credential auth). See `examples/README.md` for the flow.
 
 ## Contributing
 

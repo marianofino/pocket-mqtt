@@ -88,11 +88,17 @@ All packages follow consistent standards:
 ### MQTT Security (Device Token Authentication)
 
 - **Authentication Hook:** Validates device tokens on MQTT connection (implemented in `src/broker/authentication.ts`)
-  - Devices must provide `username` (deviceId) and `password` (token)
+  - **Two Authentication Modes:**
+    1. **Legacy Mode:** `username=deviceId`, `password=token` (backward compatible)
+    2. **Single-Credential Mode:** `username=token`, no password (new feature)
   - Tokens are auto-generated short unique identifiers (format: xxxx-yyyy-zzzz)
-  - Tokens are stored in the `DeviceToken` table with optional expiration
+  - Tokens are stored in the `DeviceToken` table with salted hash (scrypt) and HMAC lookup key
+  - **Token Storage:**
+    - `tokenHash`: Salted scrypt hash for verification (prevents rainbow table attacks)
+    - `tokenLookup`: HMAC-SHA256(secret_key, token) for efficient device lookup in single-credential mode
   - Expired tokens are automatically rejected
   - Unauthorized connections are refused
+  - **Internal DeviceId:** Stable identifier maintained for audit logs, ACLs, and topic resolution
 
 - **Authorization Hook:** Controls publish permissions
   - Currently allows all authenticated devices to publish
@@ -125,9 +131,11 @@ All packages follow consistent standards:
   - Collision-resistant even with hundreds of thousands of devices
   - Tokens can be regenerated/reset manually via API
   - Token generation is in `src/core/utils/token-generator.ts`
+  - **Token Rotation:** When tokens are regenerated, the stable `deviceId` remains unchanged
 - **Device Metadata:**
+  - `deviceId` (auto-generated): Stable internal identifier for audit logs and ACLs
   - `name` (required): Human-readable device name for identification
   - `labels` (optional): Array of labels for filtering and queries
   - `notes` (optional): Free text field for comments or notes
-- **DeviceService:** Business logic layer handling device CRUD operations and token management (`src/core/services/DeviceService.ts`)
+- **DeviceService:** Business logic layer handling device CRUD operations and token management (`src/api/services/DeviceService.ts`)
 - **Device API:** RESTful endpoints for device lifecycle management (`src/api/routes/device.routes.ts`)
