@@ -22,10 +22,11 @@ CREATE INDEX `User_tenantId_idx` ON `User` (`tenantId`);--> statement-breakpoint
 CREATE UNIQUE INDEX `User_tenantId_username_unique` ON `User` (`tenantId`,`username`);--> statement-breakpoint
 PRAGMA foreign_keys=OFF;--> statement-breakpoint
 -- Migration Note: Adding tokenLookup field for single-credential authentication
--- Existing devices will have placeholder tokenLookup values and will need to:
---   1. Continue using legacy deviceId+token authentication, OR
---   2. Regenerate their tokens via API to get valid tokenLookup values for single-credential mode
--- New devices will automatically get valid tokenLookup values
+-- IMPORTANT BREAKING CHANGE:
+--   - Legacy deviceId+token authentication has been removed.
+--   - Existing devices migrated by this script receive placeholder tokenLookup values that CANNOT be used for authentication.
+--   - ALL existing devices MUST regenerate their tokens via the API to obtain valid tokenLookup values before they can authenticate again.
+-- New devices created after this migration will automatically get valid tokenLookup values.
 --> statement-breakpoint
 CREATE TABLE `__new_DeviceToken` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
