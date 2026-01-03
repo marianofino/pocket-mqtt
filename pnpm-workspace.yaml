@@ -4,7 +4,6 @@ packages:
   # Explicitly exclude build outputs and artifacts
   - '!**/dist'
   - '!**/coverage'
-  - '!**/.turbo'
   - '!**/.vitest'
   - '!**/node_modules'
 
