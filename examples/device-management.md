@@ -5,6 +5,7 @@ This example demonstrates how to create and manage MQTT devices with auto-genera
 ## Prerequisites
 
 Start the PocketMQTT server:
+
 ```bash
 pnpm dev:all
 ```
@@ -33,6 +34,7 @@ curl -X POST http://localhost:3000/api/devices \
 ```
 
 Response:
+
 ```json
 {
   "success": true,
@@ -58,18 +60,21 @@ Use the generated token to connect your MQTT device:
 const mqtt = require('mqtt');
 
 const client = mqtt.connect('mqtt://localhost:1883', {
-  username: 'device-1735534567890-abc123',  // deviceId from response
-  password: 'a1b2-c3d4-e5f6'                // token from response
+  username: 'device-1735534567890-abc123', // deviceId from response
+  password: 'a1b2-c3d4-e5f6', // token from response
 });
 
 client.on('connect', () => {
   console.log('Connected to MQTT broker');
-  
+
   // Publish telemetry
-  client.publish('sensor/temperature', JSON.stringify({
-    value: 25.5,
-    unit: 'celsius'
-  }));
+  client.publish(
+    'sensor/temperature',
+    JSON.stringify({
+      value: 25.5,
+      unit: 'celsius',
+    })
+  );
 });
 ```
 
@@ -121,6 +126,7 @@ curl -X DELETE http://localhost:3000/api/devices/1 \
 ## Token Format
 
 Tokens are automatically generated in the format `xxxx-yyyy-zzzz`:
+
 - 12 hexadecimal characters (48 bits of entropy)
 - Short enough for easy transmission in MQTT packets
 - Collision-resistant for hundreds of thousands of devices

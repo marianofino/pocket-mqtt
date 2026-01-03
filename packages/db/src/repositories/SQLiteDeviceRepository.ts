@@ -15,7 +15,13 @@ export class SQLiteDeviceRepository implements DeviceRepository {
 
   async create(device: NewDevice): Promise<Device> {
     const result = await this.db.insert(deviceToken).values(device).returning();
-    return result[0];
+    const created = result[0];
+
+    if (!created) {
+      throw new Error('Failed to insert device');
+    }
+
+    return created;
   }
 
   async findById(id: number): Promise<Device | undefined> {

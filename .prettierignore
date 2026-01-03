@@ -1,0 +1,11 @@
+dist
+node_modules
+*.log
+.env
+.env.*
+coverage
+pnpm-lock.yaml
+package-lock.json
+drizzle
+drizzle-pg
+*.db

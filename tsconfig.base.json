@@ -1,22 +1,45 @@
 {
+  "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
+    // Language and Environment
     "target": "ES2022",
     "module": "ES2022",
     "lib": ["ES2022"],
+
+    // Module Resolution
     "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+
+    // Emit
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
+    "removeComments": false,
+    "importHelpers": false,
+    "downlevelIteration": true,
+
+    // Type Checking - Strict Mode
+    // Note: Enhanced strictness flags may require code updates in existing projects
+    // These flags help catch potential runtime errors at compile time
     "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "allowUnusedLabels": false,
+    "allowUnreachableCode": false,
+
+    // Interop Constraints
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+
+    // Path Aliases - Single source of truth for all packages
+    "baseUrl": ".",
     "paths": {
       "@pocket-mqtt/core": ["./packages/core/src/index.ts"],
       "@pocket-mqtt/core/*": ["./packages/core/src/*"],
@@ -30,5 +53,5 @@
       "@pocket-mqtt/api/*": ["./packages/api/src/*"]
     }
   },
-  "exclude": ["node_modules", "dist", "**/dist", "**/*.test.ts"]
+  "exclude": ["node_modules", "dist", "**/dist", "**/*.test.ts", "**/*.spec.ts"]
 }

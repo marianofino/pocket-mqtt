@@ -12,7 +12,13 @@ export class PostgresUserRepository implements UserRepository {
 
   async create(data: NewUser): Promise<User> {
     const result = await this.db.insert(user).values(data).returning();
-    return result[0];
+    const created = result[0];
+
+    if (!created) {
+      throw new Error('Failed to insert user');
+    }
+
+    return created;
   }
 
   async findById(id: number): Promise<User | undefined> {

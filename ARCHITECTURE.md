@@ -1,11 +1,14 @@
 # Architecture: "Pocket IoT"
 
 ## 1. Stack
+
 - **Engine:** Node.js (v20+) + Fastify.
 - **Broker:** Aedes (integrated).
 - **ORM:** Drizzle ORM (SQLite by default / PostgreSQL via ENV).
 - **Validation:** Zod for schema validation of MQTT payloads.
-- **Testing:** Vitest + Supertest (for API testing).
+- **Testing:** Vitest with workspace configuration for monorepo testing.
+- **Linting:** ESLint with TypeScript support.
+- **Formatting:** Prettier for consistent code style.
 - **Security:** JWT (REST API) + Device Token (MQTT).
 - **Package Manager:** pnpm with workspace support.
 - **Build System:** TypeScript with composite project references.
@@ -43,6 +46,7 @@ pocket-mqtt/
 ```
 
 **Key Benefits:**
+
 - Clear separation between reusable libraries (`packages/`) and executable apps (`apps/`)
 - Packages can be independently versioned and published
 - Shared TypeScript configuration with `@pocket-mqtt/*` path aliases
@@ -67,11 +71,13 @@ apps/broker (uses mqtt-broker, telemetry-service, db, core)
 ```
 
 ## 4. Data Flow
+
 1. **Ingestion:** MQTT Topic -> Zod Validation -> Memory Buffer (via TelemetryService).
 2. **Batching:** Flush buffer to DB every 2s or 100 messages via Repository Pattern.
 3. **API:** Fastify exposes `/telemetry`, `/devices`, `/tenants`, `/users` and `/auth` for history, management, and control.
 
 ## 5. Key Decisions
+
 - **Monorepo:** Organized as pnpm workspace with packages for reusability and apps for deployment.
 - **Multi-DB:** Use a Repository Pattern to abstract database calls. Supports SQLite (default) and PostgreSQL (via `DB_ADAPTER=postgres`).
 - **Validation:** Zod validates incoming MQTT payloads; malformed messages are rejected early.
@@ -82,8 +88,9 @@ apps/broker (uses mqtt-broker, telemetry-service, db, core)
 - **Path Aliases:** `@pocket-mqtt/*` aliases map to package source for clean imports across the monorepo.
 
 ## 6. Repository Pattern
+
 - **Interface:** `MessageRepository`, `DeviceRepository`, `TenantRepository`, and `UserRepository` define core operations.
-- **Implementations:** 
+- **Implementations:**
   - SQLite: `SQLiteMessageRepository`, `SQLiteDeviceRepository`, `SQLiteTenantRepository`, `SQLiteUserRepository` (better-sqlite3 driver)
   - PostgreSQL: `PostgresMessageRepository`, `PostgresDeviceRepository`, `PostgresTenantRepository`, `PostgresUserRepository` (postgres.js driver)
 - **Factory:** `createMessageRepository()`, `createDeviceRepository()`, `createTenantRepository()`, and `createUserRepository()` select implementation based on `DB_ADAPTER` env variable.
@@ -91,14 +98,45 @@ apps/broker (uses mqtt-broker, telemetry-service, db, core)
 - **Location:** All repository code is in `packages/db/src/repositories/`
 
 ## 7. Build and Development
+
 - **Build:** `pnpm build` - Builds all packages and apps using TypeScript composite projects
 - **Dev:** `pnpm dev:all` - Runs both API and broker with hot reload using concurrently
-- **Test:** `pnpm test` - Runs tests across all packages
+- **Test:** `pnpm test` - Runs tests across all packages using Vitest workspace
+- **Lint:** `pnpm lint` - Lints all TypeScript files with ESLint
+- **Format:** `pnpm format` - Formats code with Prettier
 - **Individual builds:** `pnpm --filter @pocket-mqtt/db build` - Build specific package
+
+## 7.1. Unified Configuration Approach
+
+The monorepo uses a unified configuration strategy to prevent config drift and ensure consistency:
+
+- **TypeScript (`tsconfig.base.json`):**
+  - Single source of truth for compiler options, strictness settings, and path aliases
+  - All packages/apps extend `tsconfig.base.json` with minimal overrides
+  - Enhanced strictness includes `noUncheckedIndexedAccess`, `noImplicitOverride`, etc.
+  - Composite project references for incremental builds
+
+- **ESLint (`.eslintrc.json`):**
+  - Root configuration with TypeScript-specific rules
+  - Applies to all TypeScript files across the monorepo
+  - Configured for ES2022 + Node.js environment
+  - Uses `@typescript-eslint` for type-aware linting
+
+- **Prettier (`.prettierrc.json`):**
+  - Consistent formatting rules for TypeScript, JSON, and Markdown
+  - Single quotes, 100 character line width, 2-space indentation
+  - Shared across all packages and apps
+
+- **Vitest (`vitest.workspace.ts` + `vitest.config.base.ts`):**
+  - Workspace configuration for monorepo-wide testing
+  - Individual packages extend the base config with package-specific names
+  - Shared path aliases and test settings
+  - Sequential test execution to avoid database conflicts
 
 ## 8. Security Implementation
 
 ### MQTT Security (Device Token Authentication)
+
 - **Authentication Hook:** Validates device tokens on MQTT connection (implemented in `src/broker/authentication.ts`)
   - Devices must provide `username` (deviceId) and `password` (token)
   - Tokens are auto-generated short unique identifiers (format: xxxx-yyyy-zzzz)
@@ -111,6 +149,7 @@ apps/broker (uses mqtt-broker, telemetry-service, db, core)
   - Extensible for topic-based permissions
 
 ### REST API Security (JWT Authentication)
+
 - **JWT Plugin:** `@fastify/jwt` for token generation and verification (configured in `src/api/server.ts`)
 - **Protected Endpoints:**
   - `POST /api/v1/telemetry` - Requires valid JWT
@@ -130,6 +169,7 @@ apps/broker (uses mqtt-broker, telemetry-service, db, core)
   - Algorithm: HS256 (default)
 
 ## 9. Device Management
+
 - **Auto-Generated Tokens:** Each device gets a unique token (xxxx-yyyy-zzzz format, 14 chars)
   - Uses cryptographically secure random bytes (48 bits of entropy)
   - Collision-resistant even with hundreds of thousands of devices

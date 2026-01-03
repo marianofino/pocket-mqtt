@@ -60,6 +60,8 @@ describe('core utils', () => {
       expect(validateTenantToken('acme', 'not-a-token')).toBe(false);
       expect(validateTenantToken('acme', '123456:short')).toBe(false);
       expect(validateTenantToken('acme', 'invalid:number:number:number')).toBe(false);
+      expect(validateTenantToken('acme', '123456:')).toBe(false);
+      expect(validateTenantToken('acme', ':abc123')).toBe(false);
     });
   });
 });

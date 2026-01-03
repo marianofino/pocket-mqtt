@@ -12,7 +12,13 @@ export class PostgresTenantRepository implements TenantRepository {
 
   async create(data: NewTenant): Promise<Tenant> {
     const result = await this.db.insert(tenant).values(data).returning();
-    return result[0];
+    const created = result[0];
+
+    if (!created) {
+      throw new Error('Failed to insert tenant');
+    }
+
+    return created;
   }
 
   async findById(id: number): Promise<Tenant | undefined> {

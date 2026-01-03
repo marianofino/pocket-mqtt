@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * PocketMQTT API Executable
- * 
+ *
  * Starts the REST API server with all services.
  * This is the main entry point for running the API server.
  */
@@ -21,18 +21,12 @@ const tenantService = new TenantService();
 const userService = new UserService();
 
 // Initialize API server with the services
-const apiServer = new APIServer(
-  telemetryService,
-  deviceService,
-  tenantService,
-  userService,
-  {
-    port: process.env.API_PORT ? parseInt(process.env.API_PORT) : 3000,
-    host: process.env.API_HOST || '0.0.0.0',
-    jwtSecret: process.env.JWT_SECRET,
-    maxPayloadSize
-  }
-);
+const apiServer = new APIServer(telemetryService, deviceService, tenantService, userService, {
+  port: process.env.API_PORT ? parseInt(process.env.API_PORT) : 3000,
+  host: process.env.API_HOST || '0.0.0.0',
+  jwtSecret: process.env.JWT_SECRET,
+  maxPayloadSize,
+});
 
 // Attach Fastify logger to the services after initialization
 deviceService.setLogger(apiServer.getLogger());
@@ -47,7 +41,7 @@ apiServer.start().catch((err) => {
 // Graceful shutdown
 const shutdown = async () => {
   console.log('\nShutting down API server...');
-  
+
   const errors: Error[] = [];
 
   // Stop telemetry service first (flushes any pending messages)
@@ -76,7 +70,7 @@ const shutdown = async () => {
     console.error('Errors occurred during shutdown:', errors);
     process.exit(1);
   }
-  
+
   process.exit(0);
 };
 

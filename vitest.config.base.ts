@@ -1,6 +1,10 @@
 import { defineConfig } from 'vitest/config';
 import { fileURLToPath } from 'node:url';
 
+/**
+ * Shared Vitest configuration for PocketMQTT packages.
+ * Individual packages can extend this and add package-specific settings.
+ */
 const resolvePath = (relative: string) => fileURLToPath(new URL(relative, import.meta.url));
 
 export default defineConfig({
@@ -22,7 +26,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      exclude: ['node_modules/', 'dist/', '**/*.test.ts']
-    }
-  }
+      exclude: ['node_modules/', 'dist/', '**/*.test.ts'],
+    },
+  },
 });

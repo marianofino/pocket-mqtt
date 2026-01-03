@@ -12,7 +12,12 @@
     "dev": "tsx src/index.ts",
     "start": "node dist/index.js"
   },
-  "keywords": ["pocket-mqtt", "broker", "mqtt", "executable"],
+  "keywords": [
+    "pocket-mqtt",
+    "broker",
+    "mqtt",
+    "executable"
+  ],
   "license": "ISC",
   "dependencies": {
     "@pocket-mqtt/core": "workspace:*",
