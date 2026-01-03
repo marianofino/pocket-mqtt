@@ -20,7 +20,7 @@ import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { getDbAdapter, getDbClient, disconnectDb, schemaPg } from '@pocket-mqtt/db';
 import * as sqliteSchema from '@pocket-mqtt/db';
-import { generateTenantApiKey, hashDeviceToken } from '@pocket-mqtt/core';
+import { generateTenantApiKey, hashDeviceToken, generateTokenLookup } from '@pocket-mqtt/core';
 
 type DbContext =
   | {
@@ -236,10 +236,12 @@ async function createDevice(
   seed: DeviceSeed
 ): Promise<DeviceTokenRow> {
   const tokenHash = await hashDeviceToken(seed.token);
+  const tokenLookup = generateTokenLookup(seed.token);
   const values = {
     tenantId,
     deviceId: seed.deviceId,
     tokenHash,
+    tokenLookup,
     name: seed.name,
     labels: seed.labels ? JSON.stringify(seed.labels) : null,
     notes: seed.notes || null,

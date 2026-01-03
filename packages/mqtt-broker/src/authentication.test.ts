@@ -1,11 +1,11 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, beforeAll, afterAll, vi } from 'vitest';
 import mqtt from 'mqtt';
 import { resolve } from 'node:path';
 import { existsSync, unlinkSync } from 'node:fs';
 import { MQTTServer } from '../src/mqtt-server.js';
 import { TelemetryService } from '@pocket-mqtt/telemetry-service';
-import { DeviceService } from '@pocket-mqtt/api';
 import { createTenantRepository, createDeviceRepository, resetDbClient, getDbClient } from '@pocket-mqtt/db';
+import { generateTokenLookup, hashDeviceToken } from '@pocket-mqtt/core';
 
 const TEST_DB_PATH = resolve('mqtt-auth-test.db');
 const TEST_DB_URL = `file:${TEST_DB_PATH}`;
@@ -16,7 +16,6 @@ const TEST_DB_URL = `file:${TEST_DB_PATH}`;
  */
 describe('MQTT Authentication Integration', () => {
   let mqttServer: MQTTServer;
-  let deviceService: DeviceService;
   const port = 11883; // Use different port to avoid conflicts
   let testDevice: { deviceId: string; token: string; tenantId: number };
 
@@ -76,17 +75,26 @@ describe('MQTT Authentication Integration', () => {
       apiKey: 'test-api-key-123',
     });
 
-    // Create a test device
+    // Create a test device directly using repository
     const deviceRepo = createDeviceRepository();
-    deviceService = new DeviceService(deviceRepo);
-    const device = await deviceService.createDevice({
+    const plaintextToken = 'test-token-123';
+    const deviceId = 'device-test-001';
+    const tokenHash = await hashDeviceToken(plaintextToken);
+    const tokenLookup = generateTokenLookup(plaintextToken);
+    
+    const device = await deviceRepo.create({
       tenantId: tenant.id,
+      deviceId,
+      tokenHash,
+      tokenLookup,
       name: 'Test Device',
+      labels: null,
+      notes: null,
     });
 
     testDevice = {
       deviceId: device.deviceId,
-      token: device.token,
+      token: plaintextToken,
       tenantId: tenant.id,
     };
 
@@ -222,18 +230,25 @@ describe('MQTT Authentication Integration', () => {
     });
 
     it('should handle token rotation in single-credential mode', async () => {
-      // Regenerate the token
-      const deviceRecord = await deviceService.getDeviceByDeviceId(testDevice.deviceId);
+      // Regenerate the token directly using repository
+      const deviceRepo = createDeviceRepository();
+      const deviceRecord = await deviceRepo.findByDeviceId(testDevice.deviceId);
       if (!deviceRecord) {
         throw new Error('Device not found');
       }
 
-      const updatedDevice = await deviceService.regenerateToken(deviceRecord.id);
-      if (!updatedDevice) {
-        throw new Error('Failed to regenerate token');
-      }
+      const newToken = 'new-test-token-456';
+      const newTokenHash = await hashDeviceToken(newToken);
+      const newTokenLookup = generateTokenLookup(newToken);
 
-      const newToken = updatedDevice.token;
+      const updatedDevice = await deviceRepo.update(deviceRecord.id, {
+        tokenHash: newTokenHash,
+        tokenLookup: newTokenLookup,
+      });
+
+      if (!updatedDevice) {
+        throw new Error('Failed to update token');
+      }
 
       return new Promise<void>((resolve, reject) => {
         // Try connecting with new token

@@ -61,6 +61,7 @@ function bootstrapDatabase(dbPath: string): { context: SqliteContext; dispose: (
       "tenantId" integer NOT NULL,
       "deviceId" text NOT NULL UNIQUE,
       "tokenHash" text NOT NULL,
+      "tokenLookup" text NOT NULL UNIQUE,
       "name" text NOT NULL,
       "labels" text,
       "notes" text,
@@ -69,6 +70,7 @@ function bootstrapDatabase(dbPath: string): { context: SqliteContext; dispose: (
       CONSTRAINT "DeviceToken_tenantId_fk" FOREIGN KEY ("tenantId") REFERENCES "Tenant"("id") ON DELETE CASCADE
     );
     CREATE INDEX "DeviceToken_deviceId_idx" ON "DeviceToken" ("deviceId");
+    CREATE INDEX "DeviceToken_tokenLookup_idx" ON "DeviceToken" ("tokenLookup");
   `);
 
   const db = drizzle(sqlite, { schema: testSchema });
