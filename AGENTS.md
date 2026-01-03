@@ -49,3 +49,4 @@ Before adding any new functionality or refactoring:
 - Only put key notes in the Markdowns. **Code comments are encouraged** if it's not a key note.
 - **JSDoc is required** for all exported functions, classes, types, and schemas.
 - Update docs when adding new packages or changing monorepo structure.
+- For technical decisions, defer to `ARCHITECTURE.md` instead of repeating details here.

@@ -2,72 +2,37 @@
 
 ## 1. Stack
 
-- **Engine:** Node.js (v20+) + Fastify.
-- **Broker:** Aedes (integrated).
-- **ORM:** Drizzle ORM (SQLite by default / PostgreSQL via ENV).
-- **Validation:** Zod for schema validation of MQTT payloads.
-- **Testing:** Vitest with workspace configuration for monorepo testing.
-- **Linting:** ESLint with TypeScript support.
-- **Formatting:** Prettier for consistent code style.
-- **Security:** JWT (REST API) + Device Token (MQTT).
-- **Package Manager:** pnpm with workspace support.
-- **Build System:** TypeScript with composite project references.
+- **Engine:** Node.js (v20+) + Fastify
+- **Broker:** Aedes (integrated)
+- **ORM:** Drizzle ORM (SQLite by default / PostgreSQL via ENV)
+- **Validation:** Zod for MQTT payloads
+- **Testing:** Vitest workspace
+- **Linting/Formatting:** ESLint + Prettier
+- **Security:** JWT (REST) + Device Token (MQTT)
+- **Package Manager:** pnpm workspace
+- **Build:** TypeScript with composite references
 
 ## 2. Project Structure (Monorepo)
 
-The codebase is organized as a pnpm monorepo with packages and apps:
-
 ```
-pocket-mqtt/
-├── packages/              # Reusable library packages
-│   ├── core/             # Core utilities, types, validation schemas
-│   │   ├── utils/        # Token generator, tenant utilities
-│   │   └── validation/   # Zod schemas for MQTT payloads
-│   ├── db/               # Database layer
-│   │   ├── db/           # Drizzle schemas (SQLite & PostgreSQL)
-│   │   ├── repositories/ # Repository Pattern implementations
-│   │   └── database.ts   # DB connection management
-│   ├── telemetry-service/ # Telemetry buffering service
-│   │   └── TelemetryService.ts  # Buffer/flush implementation
-│   ├── mqtt-broker/      # MQTT broker library
-│   │   ├── mqtt-server.ts       # Aedes server wrapper
-│   │   ├── authentication.ts    # Device token auth hooks
-│   │   └── handlers.ts          # MQTT publish handlers
-│   └── api/              # REST API library
-│       ├── server.ts     # Fastify server setup
-│       ├── routes/       # API route handlers
-│       └── services/     # Business logic services
-├── apps/                 # Executable applications
-│   ├── api/              # Full API + Telemetry server
-│   │   └── index.ts      # Main entry point (REST + services)
-│   └── mqtt-broker/      # Standalone MQTT broker
-│       └── index.ts      # Main entry point (MQTT → DB only)
-└── tsconfig.base.json    # Shared TypeScript configuration with path aliases
+packages/  core | db | telemetry-service | mqtt-broker | api
+apps/      api  | mqtt-broker
 ```
 
-**Key Benefits:**
-
-- Clear separation between reusable libraries (`packages/`) and executable apps (`apps/`)
-- Packages can be independently versioned and published
-- Shared TypeScript configuration with `@pocket-mqtt/*` path aliases
-- Two deployment modes: full platform (API) or lightweight broker
-- Easier testing and development with isolated concerns
-- Scalable for future microservices architecture
+Shared `tsconfig.base.json` defines `@pocket-mqtt/*` aliases. Packages are reusable libraries; apps are runnable entrypoints. Two deployment modes: full platform (API) or standalone broker.
 
 ## 3. Package Dependencies
 
 ```
-@pocket-mqtt/core (no internal deps)
-    ↓
-@pocket-mqtt/db (depends on core)
-    ↓
-@pocket-mqtt/telemetry-service (depends on db, core)
-    ↓
-@pocket-mqtt/mqtt-broker (depends on telemetry-service, db, core)
-@pocket-mqtt/api (depends on telemetry-service, db, core)
-    ↓
-apps/api (uses api, telemetry-service, db, core)
-apps/mqtt-broker (uses mqtt-broker, telemetry-service, db, core)
+core
+  ↓
+db
+  ↓
+telemetry-service
+  ↓
+mqtt-broker, api
+  ↓
+apps/api, apps/mqtt-broker
 ```
 
 ## 4. Data Flow
@@ -76,72 +41,35 @@ apps/mqtt-broker (uses mqtt-broker, telemetry-service, db, core)
 2. **Batching:** Flush buffer to DB every 2s or 100 messages via Repository Pattern.
 3. **API:** Fastify exposes `/telemetry`, `/devices`, `/tenants`, `/users` and `/auth` for history, management, and control.
 
-## 5. Drizzle ORM (Consolidated in db Package)
+## 5. Drizzle ORM (single home: `packages/db`)
 
-All Drizzle ORM artifacts are consolidated in `packages/db/`:
-- **Schemas**: `src/db/schema.ts` (SQLite), `src/db/schema.pg.ts` (PostgreSQL)
-- **Configurations**: `drizzle.config.ts` (SQLite), `drizzle.config.pg.ts` (PostgreSQL)
-- **Migrations**: `drizzle/` (SQLite), `drizzle-pg/` (PostgreSQL)
-- **Management**: All Drizzle operations run through `pnpm --filter @pocket-mqtt/db` scripts
-
-This consolidation ensures a single source of truth for database schemas and migrations.
+- Schemas: `src/db/schema.ts` (SQLite), `src/db/schema.pg.ts` (PostgreSQL)
+- Configs: `drizzle.config.ts`, `drizzle.config.pg.ts`
+- Migrations: `drizzle/` (SQLite), `drizzle-pg/` (PostgreSQL)
+- Management: run via `pnpm --filter @pocket-mqtt/db ...`
 
 ## 6. Key Decisions
 
-- **Monorepo:** Organized as pnpm workspace with packages for reusability and apps for deployment.
-- **Multi-DB:** Use a Repository Pattern to abstract database calls. Supports SQLite (default) and PostgreSQL (via `DB_ADAPTER=postgres`).
-- **Validation:** Zod validates incoming MQTT payloads; malformed messages are rejected early.
-- **Auth:** Device-token based (MQTT) & JWT (API).
-- **Performance:** SQLite WAL mode enabled for concurrent I/O; PostgreSQL uses connection pooling.
-- **Drizzle ORM:** Schema-first approach with type-safe queries and automatic migrations.
-- **TypeScript:** Strict mode with composite project references for incremental builds.
-- **Path Aliases:** `@pocket-mqtt/*` aliases map to package source for clean imports across the monorepo.
+- **API-first:** Devices can be managed and telemetry can be read via REST endpoints.
+- **Multi-DB:** Repository pattern abstracts SQLite (default) and Postgres (`DB_ADAPTER=postgres`).
+- **Validation:** Zod rejects malformed MQTT payloads early.
+- **Auth:** Device-token for MQTT; JWT for REST.
+- **Performance:** SQLite WAL; Postgres pooling; telemetry batching (2s/100 msgs) in TelemetryService.
+- **TypeScript:** Strict + composite project refs with shared aliases.
 
 ## 7. Repository Pattern
 
-- **Interface:** `MessageRepository`, `DeviceRepository`, `TenantRepository`, and `UserRepository` define core operations.
-- **Implementations:**
-  - SQLite: `SQLiteMessageRepository`, `SQLiteDeviceRepository`, `SQLiteTenantRepository`, `SQLiteUserRepository` (better-sqlite3 driver)
-  - PostgreSQL: `PostgresMessageRepository`, `PostgresDeviceRepository`, `PostgresTenantRepository`, `PostgresUserRepository` (postgres.js driver)
-- **Factory:** `createMessageRepository()`, `createDeviceRepository()`, `createTenantRepository()`, and `createUserRepository()` select implementation based on `DB_ADAPTER` env variable.
-- **Adapter Selection:** Set `DB_ADAPTER=postgres` or `DB_ADAPTER=sqlite` (default).
-- **Location:** All repository code is in `packages/db/src/repositories/`
+- Interfaces: `MessageRepository`, `DeviceRepository`, `TenantRepository`, `UserRepository`
+- Implementations: SQLite (`better-sqlite3`) and Postgres (`postgres.js`)
+- Factories: `create*Repository` choose implementation via `DB_ADAPTER`
+- Location: `packages/db/src/repositories/`
 
-## 8. Build and Development
+## 8. Unified Configuration Approach
 
-- **Build:** `pnpm build` - Builds all packages and apps using TypeScript composite projects
-- **Dev:** `pnpm dev:all` - Runs both API and broker with hot reload using concurrently
-- **Test:** `pnpm test` - Runs tests across all packages using Vitest workspace
-- **Lint:** `pnpm lint` - Lints all TypeScript files with ESLint
-- **Format:** `pnpm format` - Formats code with Prettier
-- **Individual builds:** `pnpm --filter @pocket-mqtt/db build` - Build specific package
-
-## 7.1. Unified Configuration Approach
-
-The monorepo uses a unified configuration strategy to prevent config drift and ensure consistency:
-
-- **TypeScript (`tsconfig.base.json`):**
-  - Single source of truth for compiler options, strictness settings, and path aliases
-  - All packages/apps extend `tsconfig.base.json` with minimal overrides
-  - Enhanced strictness includes `noUncheckedIndexedAccess`, `noImplicitOverride`, etc.
-  - Composite project references for incremental builds
-
-- **ESLint (`.eslintrc.json`):**
-  - Root configuration with TypeScript-specific rules
-  - Applies to all TypeScript files across the monorepo
-  - Configured for ES2022 + Node.js environment
-  - Uses `@typescript-eslint` for type-aware linting
-
-- **Prettier (`.prettierrc.json`):**
-  - Consistent formatting rules for TypeScript, JSON, and Markdown
-  - Single quotes, 100 character line width, 2-space indentation
-  - Shared across all packages and apps
-
-- **Vitest (`vitest.workspace.ts` + `vitest.config.base.ts`):**
-  - Workspace configuration for monorepo-wide testing
-  - Individual packages extend the base config with package-specific names
-  - Shared path aliases and test settings
-  - Sequential test execution to avoid database conflicts
+- **TypeScript (`tsconfig.base.json`):** single source of truth, strict + composite refs, aliases
+- **ESLint (`.eslintrc.json`):** root config for TS/Node
+- **Prettier (`.prettierrc.json`):** shared formatting
+- **Vitest (`vitest.workspace.ts` + `vitest.config.base.ts`):** shared test defaults, sequential to avoid DB conflicts
 
 ## 9. Package Hygiene and Structure
 
@@ -155,7 +83,7 @@ All packages follow consistent standards:
 - **Peer Dependencies**: Used for optional or consumer-provided dependencies (e.g., dotenv, zod)
 - **Documentation**: Each package has a focused README explaining purpose, usage, and dependencies
 
-## 10. Security Implementation
+## 9. Security Implementation
 
 ### MQTT Security (Device Token Authentication)
 
@@ -190,7 +118,7 @@ All packages follow consistent standards:
   - Expiration: 1 hour (configurable)
   - Algorithm: HS256 (default)
 
-## 11. Device Management
+## 10. Device Management
 
 - **Auto-Generated Tokens:** Each device gets a unique token (xxxx-yyyy-zzzz format, 14 chars)
   - Uses cryptographically secure random bytes (48 bits of entropy)

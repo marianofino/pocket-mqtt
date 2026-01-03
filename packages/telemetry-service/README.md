@@ -1,57 +1,26 @@
 # @pocket-mqtt/telemetry-service
 
-Telemetry buffering and batch persistence service for PocketMQTT.
+Buffers telemetry in-memory and flushes to the database in batches (every 2s or 100 messages).
 
-## Overview
-
-High-throughput telemetry ingestion service with in-memory buffering and automatic batch persistence.
-
-## Features
-
-- **In-Memory Buffering**: Accumulates messages before database writes
-- **Automatic Flushing**: Flushes every 2 seconds or when buffer reaches 100 messages
-- **High Throughput**: Handles >1000 messages/minute
-- **Graceful Shutdown**: Ensures buffered data is persisted on shutdown
-
-## Installation
+## Install
 
 ```bash
 pnpm add @pocket-mqtt/telemetry-service
 ```
 
-## Usage
+## Quick use
 
 ```typescript
 import { TelemetryService } from '@pocket-mqtt/telemetry-service';
 import { getDbClient, createMessageRepository } from '@pocket-mqtt/db';
 
 const db = getDbClient();
-const messageRepo = createMessageRepository(db);
-const telemetryService = new TelemetryService(messageRepo);
+const messages = createMessageRepository(db);
+const telemetry = new TelemetryService(messages);
 
-// Start the service
-await telemetryService.start();
-
-// Buffer a message (non-blocking)
-telemetryService.buffer({
-  topic: 'sensor/temp',
-  payload: '25.5',
-  tenantId: 'tenant-123',
-  deviceId: 'device-456'
-});
-
-// Graceful shutdown (flushes buffer)
-await telemetryService.stop();
+await telemetry.start();
+telemetry.buffer({ topic: 'sensor/temp', payload: '25.5', tenantId: 't1', deviceId: 'd1' });
+await telemetry.stop();
 ```
 
-## Dependencies
-
-- `@pocket-mqtt/core` - Core utilities
-- `@pocket-mqtt/db` - Database repositories
-
-## Scripts
-
-- `pnpm build` - Compile TypeScript
-- `pnpm clean` - Remove build artifacts
-- `pnpm test` - Run tests
-- `pnpm test:watch` - Run tests in watch mode
+Depends on `@pocket-mqtt/db` and `@pocket-mqtt/core`. See batching rules in `ARCHITECTURE.md`.
