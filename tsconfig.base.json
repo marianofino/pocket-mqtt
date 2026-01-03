@@ -21,6 +21,8 @@
     "downlevelIteration": true,
 
     // Type Checking - Strict Mode
+    // Note: Enhanced strictness flags may require code updates in existing projects
+    // These flags help catch potential runtime errors at compile time
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
