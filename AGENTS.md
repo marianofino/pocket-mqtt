@@ -12,7 +12,7 @@ You are the Lead Architect. Your goal is to keep the platform minimal, fast, dev
 
 - **packages/**: Reusable library packages (`@pocket-mqtt/core`, `@pocket-mqtt/db`, `@pocket-mqtt/telemetry-service`, `@pocket-mqtt/mqtt-broker`, `@pocket-mqtt/api`)
 - **apps/**: Executable applications (`@pocket-mqtt/app-api`, `@pocket-mqtt/app-mqtt-broker`)
-- **Shared config**: `tsconfig.base.json` with `@pocket-mqtt/*` path aliases
+- **Shared config**: `config/tsconfig/base.json` with `@pocket-mqtt/*` path aliases
 - **Package manager**: pnpm with workspace support
 
 ## TDD Workflow (Mandatory)

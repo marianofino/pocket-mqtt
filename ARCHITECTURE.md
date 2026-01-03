@@ -19,7 +19,7 @@ packages/  core | db | telemetry-service | mqtt-broker | api
 apps/      api  | mqtt-broker
 ```
 
-Shared `tsconfig.base.json` defines `@pocket-mqtt/*` aliases. Packages are reusable libraries; apps are runnable entrypoints. Two deployment modes: full platform (API) or standalone broker.
+Shared `config/tsconfig/base.json` defines `@pocket-mqtt/*` aliases. Packages are reusable libraries; apps are runnable entrypoints. Two deployment modes: full platform (API) or standalone broker.
 
 ## 3. Package Dependencies
 
@@ -66,10 +66,10 @@ apps/api, apps/mqtt-broker
 
 ## 8. Unified Configuration Approach
 
-- **TypeScript (`tsconfig.base.json`):** single source of truth, strict + composite refs, aliases
+- **TypeScript (`config/tsconfig/base.json`):** single source of truth, strict + composite refs, aliases
 - **ESLint (`.eslintrc.json`):** root config for TS/Node
 - **Prettier (`.prettierrc.json`):** shared formatting
-- **Vitest (`vitest.workspace.ts` + `vitest.config.base.ts`):** shared test defaults, sequential to avoid DB conflicts
+- **Vitest (`config/vitest/workspace.ts` + `config/vitest/base.ts`):** shared test defaults, sequential to avoid DB conflicts
 
 ## 9. Package Hygiene and Structure
 

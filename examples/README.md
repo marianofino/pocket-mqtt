@@ -18,6 +18,24 @@ pnpm dev:all   # keep running in another terminal
   - Subscriber: `npx tsx examples/mqtt-subscriber.ts`
   - Publisher: `npx tsx examples/mqtt-publisher.ts`
 
+## Device management quickstart
+
+1) Start services: `pnpm dev:all`
+2) Get JWT: `curl -X POST http://localhost:3000/api/v1/auth/login -H "Content-Type: application/json" -d '{"username":"admin","password":"admin123"}'`
+3) Create device:
+
+```bash
+curl -X POST http://localhost:3000/api/devices \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Temperature Sensor 1","labels":["sensor","temperature"],"notes":"Zone A"}'
+```
+
+Response includes `deviceId` and `token`.
+
+4) Connect over MQTT using `deviceId` as username and `token` as password (e.g., mqtt.js or paho). Broker: `mqtt://localhost:1883`.
+5) Manage devices via REST with the same JWT: list, get by id, regenerate token, update metadata, delete.
+
 ## Device lifecycle (API + MQTT)
 
 1) **Create device (JWT required)**
