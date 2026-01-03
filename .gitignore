@@ -3,19 +3,28 @@ node_modules/
 dist/
 **/dist/
 coverage/
+**/.vitest/
 *.log
-.env
 .DS_Store
 *.db
 *.db-journal
 *.db-wal
 *.db-shm
 
+# Environment files (all variants)
+.env
+.env.*
+!.env.example
+
 # pnpm
 .pnpm-store/
 
-# TypeScript build artifacts
+# Build and cache artifacts
+.turbo/
+**/.turbo/
 *.tsbuildinfo
+
+# TypeScript build artifacts
 packages/**/src/**/*.js
 packages/**/src/**/*.js.map
 packages/**/src/**/*.d.ts
