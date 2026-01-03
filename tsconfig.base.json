@@ -5,13 +5,13 @@
     "target": "ES2022",
     "module": "ES2022",
     "lib": ["ES2022"],
-    
+
     // Module Resolution
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    
+
     // Emit
     "declaration": true,
     "declarationMap": true,
@@ -19,7 +19,7 @@
     "removeComments": false,
     "importHelpers": false,
     "downlevelIteration": true,
-    
+
     // Type Checking - Strict Mode
     "strict": true,
     "noUnusedLocals": true,
@@ -30,12 +30,12 @@
     "noImplicitOverride": true,
     "allowUnusedLabels": false,
     "allowUnreachableCode": false,
-    
+
     // Interop Constraints
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "isolatedModules": true,
-    
+
     // Path Aliases - Single source of truth for all packages
     "baseUrl": ".",
     "paths": {
