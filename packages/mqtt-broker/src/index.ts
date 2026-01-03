@@ -5,3 +5,4 @@
 export * from './mqtt-server.js';
 export * from './authentication.js';
 export * from './handlers.js';
+export * from './topic-rewriter.js';
