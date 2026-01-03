@@ -19,8 +19,6 @@
     "dist",
     "drizzle",
     "drizzle-pg",
-    "drizzle.config.ts",
-    "drizzle.config.pg.ts",
     "package.json",
     "README.md"
   ],
