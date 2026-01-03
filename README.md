@@ -84,7 +84,7 @@ pnpm dev:all
 pnpm dev:api
 
 # Run MQTT broker only
-pnpm dev:broker
+pnpm dev:mqtt-broker
 ```
 
 ### Build All Packages
@@ -109,7 +109,7 @@ pnpm build
 pnpm start:api
 
 # Start broker
-pnpm start:broker
+pnpm start:mqtt-broker
 ```
 
 ## Testing
@@ -185,7 +185,7 @@ Full-featured REST API server with telemetry service.
 - JWT-based authentication
 - Swagger/OpenAPI support (future)
 
-### @pocket-mqtt/app-broker
+### @pocket-mqtt/app-mqtt-broker
 Standalone MQTT broker for MQTT→DB ingestion without REST API.
 - MQTT broker on port 1883
 - Direct telemetry persistence
@@ -203,12 +203,12 @@ Standalone MQTT broker for MQTT→DB ingestion without REST API.
 pnpm start:api
 
 # Start MQTT broker (port 1883)
-pnpm start:broker
+pnpm start:mqtt-broker
 
 # Or in development with hot reload
 pnpm dev:all  # Both together
 pnpm dev:api  # API only
-pnpm dev:broker  # Broker only
+pnpm dev:mqtt-broker  # Broker only
 ```
 
 ### As a Library

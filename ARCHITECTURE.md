@@ -40,7 +40,7 @@ pocket-mqtt/
 ├── apps/                 # Executable applications
 │   ├── api/              # Full API + Telemetry server
 │   │   └── index.ts      # Main entry point (REST + services)
-│   └── broker/           # Standalone MQTT broker
+│   └── mqtt-broker/      # Standalone MQTT broker
 │       └── index.ts      # Main entry point (MQTT → DB only)
 └── tsconfig.base.json    # Shared TypeScript configuration with path aliases
 ```
@@ -67,7 +67,7 @@ pocket-mqtt/
 @pocket-mqtt/api (depends on telemetry-service, db, core)
     ↓
 apps/api (uses api, telemetry-service, db, core)
-apps/broker (uses mqtt-broker, telemetry-service, db, core)
+apps/mqtt-broker (uses mqtt-broker, telemetry-service, db, core)
 ```
 
 ## 4. Data Flow

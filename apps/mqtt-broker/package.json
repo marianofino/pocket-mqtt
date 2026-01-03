@@ -1,11 +1,11 @@
 {
-  "name": "@pocket-mqtt/app-broker",
+  "name": "@pocket-mqtt/app-mqtt-broker",
   "version": "1.0.0",
   "description": "PocketMQTT MQTT broker executable (MQTT→DB without REST)",
   "type": "module",
   "main": "./dist/index.js",
   "bin": {
-    "pocket-broker": "./dist/index.js"
+    "pocket-mqtt-broker": "./dist/index.js"
   },
   "files": [
     "dist",
