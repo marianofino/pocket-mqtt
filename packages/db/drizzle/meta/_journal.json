@@ -22,6 +22,13 @@
       "when": 1767113416886,
       "tag": "0002_tan_the_fury",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1767444163429,
+      "tag": "0003_good_blazing_skull",
+      "breakpoints": true
     }
   ]
 }

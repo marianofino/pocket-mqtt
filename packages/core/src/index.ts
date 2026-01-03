@@ -5,6 +5,7 @@
 // Export utilities
 export * from './utils/token-generator.js';
 export * from './utils/token-hash.js';
+export * from './utils/token-lookup.js';
 export * from './utils/tenant-utils.js';
 
 // Export validation schemas

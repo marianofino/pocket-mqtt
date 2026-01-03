@@ -9,6 +9,7 @@ export interface Device {
   tenantId: number;
   deviceId: string;
   tokenHash: string;
+  tokenLookup: string;
   name: string;
   labels: string | null; // JSON string array
   notes: string | null;
@@ -25,6 +26,7 @@ export interface NewDevice {
   tenantId: number;
   deviceId: string;
   tokenHash: string;
+  tokenLookup: string;
   name: string;
   labels?: string | null; // JSON string array
   notes?: string | null;
@@ -38,6 +40,7 @@ export interface NewDevice {
  */
 export interface UpdateDevice {
   tokenHash?: string;
+  tokenLookup?: string;
   name?: string;
   labels?: string | null;
   notes?: string | null;
@@ -73,6 +76,13 @@ export interface DeviceRepository {
    * @returns Promise with device or undefined if not found
    */
   findByDeviceId(deviceId: string): Promise<Device | undefined>;
+
+  /**
+   * Find a device by its token lookup key (for single-credential auth).
+   * @param tokenLookup HMAC-based token lookup key
+   * @returns Promise with device or undefined if not found
+   */
+  findByTokenLookup(tokenLookup: string): Promise<Device | undefined>;
 
   /**
    * List all devices with optional pagination.

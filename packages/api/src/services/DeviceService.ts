@@ -1,6 +1,6 @@
 import { createDeviceRepository } from '@pocket-mqtt/db';
 import type { DeviceRepository, Device, NewDevice, UpdateDevice } from '@pocket-mqtt/db';
-import { generateDeviceToken, hashDeviceToken } from '@pocket-mqtt/core';
+import { generateDeviceToken, hashDeviceToken, generateTokenLookup } from '@pocket-mqtt/core';
 import { randomBytes } from 'crypto';
 import type { FastifyBaseLogger } from 'fastify';
 
@@ -52,6 +52,7 @@ export class DeviceService {
     const deviceId = `device-${Date.now()}-${randomSuffix}`;
     const plaintextToken = generateDeviceToken();
     const tokenHash = await hashDeviceToken(plaintextToken);
+    const tokenLookup = generateTokenLookup(plaintextToken);
 
     // Serialize labels to JSON if provided
     const labelsJson = data.labels ? JSON.stringify(data.labels) : null;
@@ -60,6 +61,7 @@ export class DeviceService {
       tenantId: data.tenantId,
       deviceId,
       tokenHash,
+      tokenLookup,
       name: data.name,
       labels: labelsJson,
       notes: data.notes ?? null,
@@ -129,8 +131,9 @@ export class DeviceService {
   async regenerateToken(id: number): Promise<(Device & { token: string }) | undefined> {
     const plaintextToken = generateDeviceToken();
     const tokenHash = await hashDeviceToken(plaintextToken);
+    const tokenLookup = generateTokenLookup(plaintextToken);
     
-    const updated = await this.repository.update(id, { tokenHash });
+    const updated = await this.repository.update(id, { tokenHash, tokenLookup });
     
     if (!updated) {
       return undefined;

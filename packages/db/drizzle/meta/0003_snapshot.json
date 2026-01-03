@@ -1,0 +1,373 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "ee2363d6-e1fe-4dbd-bf5c-55c978329a2c",
+  "prevId": "5d794259-2539-490a-a144-3dd94fe38e39",
+  "tables": {
+    "DeviceToken": {
+      "name": "DeviceToken",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "tenantId": {
+          "name": "tenantId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "deviceId": {
+          "name": "deviceId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tokenHash": {
+          "name": "tokenHash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tokenLookup": {
+          "name": "tokenLookup",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "labels": {
+          "name": "labels",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "expiresAt": {
+          "name": "expiresAt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "DeviceToken_deviceId_unique": {
+          "name": "DeviceToken_deviceId_unique",
+          "columns": [
+            "deviceId"
+          ],
+          "isUnique": true
+        },
+        "DeviceToken_tokenLookup_unique": {
+          "name": "DeviceToken_tokenLookup_unique",
+          "columns": [
+            "tokenLookup"
+          ],
+          "isUnique": true
+        },
+        "DeviceToken_deviceId_idx": {
+          "name": "DeviceToken_deviceId_idx",
+          "columns": [
+            "deviceId"
+          ],
+          "isUnique": false
+        },
+        "DeviceToken_tenantId_idx": {
+          "name": "DeviceToken_tenantId_idx",
+          "columns": [
+            "tenantId"
+          ],
+          "isUnique": false
+        },
+        "DeviceToken_tokenLookup_idx": {
+          "name": "DeviceToken_tokenLookup_idx",
+          "columns": [
+            "tokenLookup"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "DeviceToken_tenantId_Tenant_id_fk": {
+          "name": "DeviceToken_tenantId_Tenant_id_fk",
+          "tableFrom": "DeviceToken",
+          "tableTo": "Tenant",
+          "columnsFrom": [
+            "tenantId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "Telemetry": {
+      "name": "Telemetry",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "tenantId": {
+          "name": "tenantId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "topic": {
+          "name": "topic",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payload": {
+          "name": "payload",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "timestamp": {
+          "name": "timestamp",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "Telemetry_timestamp_idx": {
+          "name": "Telemetry_timestamp_idx",
+          "columns": [
+            "timestamp"
+          ],
+          "isUnique": false
+        },
+        "Telemetry_topic_idx": {
+          "name": "Telemetry_topic_idx",
+          "columns": [
+            "topic"
+          ],
+          "isUnique": false
+        },
+        "Telemetry_tenantId_idx": {
+          "name": "Telemetry_tenantId_idx",
+          "columns": [
+            "tenantId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "Telemetry_tenantId_Tenant_id_fk": {
+          "name": "Telemetry_tenantId_Tenant_id_fk",
+          "tableFrom": "Telemetry",
+          "tableTo": "Tenant",
+          "columnsFrom": [
+            "tenantId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "Tenant": {
+      "name": "Tenant",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "apiKey": {
+          "name": "apiKey",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "Tenant_name_unique": {
+          "name": "Tenant_name_unique",
+          "columns": [
+            "name"
+          ],
+          "isUnique": true
+        },
+        "Tenant_apiKey_unique": {
+          "name": "Tenant_apiKey_unique",
+          "columns": [
+            "apiKey"
+          ],
+          "isUnique": true
+        },
+        "Tenant_name_idx": {
+          "name": "Tenant_name_idx",
+          "columns": [
+            "name"
+          ],
+          "isUnique": false
+        },
+        "Tenant_apiKey_idx": {
+          "name": "Tenant_apiKey_idx",
+          "columns": [
+            "apiKey"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "User": {
+      "name": "User",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "tenantId": {
+          "name": "tenantId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "username": {
+          "name": "username",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "passwordHash": {
+          "name": "passwordHash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "User_tenantId_idx": {
+          "name": "User_tenantId_idx",
+          "columns": [
+            "tenantId"
+          ],
+          "isUnique": false
+        },
+        "User_tenantId_username_unique": {
+          "name": "User_tenantId_username_unique",
+          "columns": [
+            "tenantId",
+            "username"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "User_tenantId_Tenant_id_fk": {
+          "name": "User_tenantId_Tenant_id_fk",
+          "tableFrom": "User",
+          "tableTo": "Tenant",
+          "columnsFrom": [
+            "tenantId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {
+      "\"DeviceToken\".\"token\"": "\"DeviceToken\".\"tenantId\""
+    }
+  },
+  "internal": {
+    "indexes": {}
+  }
+}
