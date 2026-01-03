@@ -1,5 +1,5 @@
-import { createMessageRepository } from '@pocket/db';
-import type { MessageRepository } from '@pocket/db';
+import { createMessageRepository } from '@pocket-mqtt/db';
+import type { MessageRepository } from '@pocket-mqtt/db';
 
 interface TelemetryMessage {
   tenantId: number;
@@ -51,7 +51,8 @@ export class TelemetryService {
    */
   async addMessage(topic: string, payload: string, tenantId: number): Promise<void> {
     if (!this.isRunning) {
-      throw new Error('TelemetryService is stopped');
+      // Silently ignore incoming messages once stopped to allow graceful broker shutdown
+      return;
     }
 
     if (typeof tenantId !== 'number' || tenantId < 1) {

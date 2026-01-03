@@ -1,6 +1,6 @@
 import type Aedes from 'aedes';
-import type { TelemetryService } from '@pocket/telemetry-service';
-import { MqttPayloadSchema } from '@pocket/core';
+import type { TelemetryService } from '@pocket-mqtt/telemetry-service';
+import { MqttPayloadSchema } from '@pocket-mqtt/core';
 
 /**
  * Setup MQTT publish handlers for telemetry ingestion.

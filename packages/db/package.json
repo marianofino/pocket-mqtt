@@ -1,5 +1,5 @@
 {
-  "name": "@pocket/db",
+  "name": "@pocket-mqtt/db",
   "version": "1.0.0",
   "description": "Database schemas and migrations for PocketMQTT",
   "type": "module",
@@ -27,7 +27,7 @@
   "keywords": ["pocket-mqtt", "database", "drizzle"],
   "license": "ISC",
   "dependencies": {
-    "@pocket/core": "workspace:*",
+    "@pocket-mqtt/core": "workspace:*",
     "better-sqlite3": "^12.5.0",
     "drizzle-orm": "^0.45.1",
     "pg": "^8.16.3",

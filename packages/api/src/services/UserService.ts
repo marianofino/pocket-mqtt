@@ -1,5 +1,5 @@
-import { createUserRepository } from '@pocket/db';
-import type { UserRepository, User, NewUser } from '@pocket/db';
+import { createUserRepository } from '@pocket-mqtt/db';
+import type { UserRepository, User, NewUser } from '@pocket-mqtt/db';
 import { randomBytes, timingSafeEqual, scrypt } from 'node:crypto';
 import { promisify } from 'node:util';
 

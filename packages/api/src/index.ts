@@ -1,5 +1,5 @@
 /**
- * @pocket/api - Fastify plugins and routes for PocketMQTT REST API
+ * @pocket-mqtt/api - Fastify plugins and routes for PocketMQTT REST API
  */
 
 export * from './server.js';

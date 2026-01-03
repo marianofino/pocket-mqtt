@@ -1,7 +1,7 @@
 /// <reference path="../types.d.ts" />
 
 import type { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
-import type { TelemetryService } from '@pocket/telemetry-service';
+import type { TelemetryService } from '@pocket-mqtt/telemetry-service';
 
 /**
  * Options for telemetry routes plugin

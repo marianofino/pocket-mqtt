@@ -5,11 +5,11 @@ import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import { desc } from 'drizzle-orm';
-import * as schemaSqlite from '@pocket/db';
-import type { DeviceToken, Tenant } from '@pocket/db';
+import * as schemaSqlite from '@pocket-mqtt/db';
+import type { DeviceToken, Tenant } from '@pocket-mqtt/db';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { seedDevicesForTenant } from './setup-device.js';
-import { verifyDeviceToken } from '@pocket/core';
+import { verifyDeviceToken } from '@pocket-mqtt/core';
 
 const DEVICE_SEEDS = [
   {

@@ -1,5 +1,5 @@
 {
-  "name": "@pocket/core",
+  "name": "@pocket-mqtt/core",
   "version": "1.0.0",
   "description": "Core utilities, config, and types for PocketMQTT",
   "type": "module",

@@ -1,6 +1,6 @@
-import { createDeviceRepository } from '@pocket/db';
-import type { DeviceRepository, Device, NewDevice, UpdateDevice } from '@pocket/db';
-import { generateDeviceToken, hashDeviceToken } from '@pocket/core';
+import { createDeviceRepository } from '@pocket-mqtt/db';
+import type { DeviceRepository, Device, NewDevice, UpdateDevice } from '@pocket-mqtt/db';
+import { generateDeviceToken, hashDeviceToken } from '@pocket-mqtt/core';
 import { randomBytes } from 'crypto';
 import type { FastifyBaseLogger } from 'fastify';
 

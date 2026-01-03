@@ -18,9 +18,9 @@ import { resolve } from 'node:path';
 import { eq, desc } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { getDbAdapter, getDbClient, disconnectDb, schemaPg } from '@pocket/db';
-import * as sqliteSchema from '@pocket/db';
-import { generateTenantApiKey, hashDeviceToken } from '@pocket/core';
+import { getDbAdapter, getDbClient, disconnectDb, schemaPg } from '@pocket-mqtt/db';
+import * as sqliteSchema from '@pocket-mqtt/db';
+import { generateTenantApiKey, hashDeviceToken } from '@pocket-mqtt/core';
 
 type DbContext =
   | {

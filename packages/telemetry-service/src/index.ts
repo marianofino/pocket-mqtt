@@ -1,5 +1,5 @@
 /**
- * @pocket/telemetry-service - Telemetry buffering and flushing service
+ * @pocket-mqtt/telemetry-service - Telemetry buffering and flushing service
  */
 
 export * from './TelemetryService.js';

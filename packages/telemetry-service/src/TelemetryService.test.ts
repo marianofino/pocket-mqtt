@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
 const insertBatch = vi.fn<(messages: unknown[]) => Promise<void>>(() => Promise.resolve());
 
-vi.mock('@pocket/db', () => ({
+vi.mock('@pocket-mqtt/db', () => ({
   createMessageRepository: () => ({ insertBatch })
 }));
 
@@ -45,5 +45,15 @@ describe('TelemetryService', () => {
     const service = new TelemetryService();
     await expect(service.addMessage('t', 'p', 0)).rejects.toThrow('tenantId is required');
     await service.stop();
+  });
+
+  it('ignores messages after stop without throwing', async () => {
+    const service = new TelemetryService();
+
+    await service.stop();
+
+    await expect(service.addMessage('topic/after-stop', 'payload', 1)).resolves.toBeUndefined();
+    expect(service.getBufferSize()).toBe(0);
+    expect(insertBatch).not.toHaveBeenCalled();
   });
 });
