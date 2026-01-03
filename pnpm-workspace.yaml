@@ -1,6 +1,11 @@
 packages:
   - packages/*
   - apps/*
+  # Explicitly exclude build outputs and artifacts
+  - '!**/dist'
+  - '!**/coverage'
+  - '!**/.vitest'
+  - '!**/node_modules'
 
 onlyBuiltDependencies:
   - better-sqlite3
