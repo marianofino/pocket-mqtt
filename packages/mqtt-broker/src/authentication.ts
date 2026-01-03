@@ -1,18 +1,22 @@
 import type Aedes from 'aedes';
-import type { AuthenticateError, Client, PublishPacket } from 'aedes';
+import type { AuthenticateError, Client, PublishPacket, Subscription } from 'aedes';
 import { createDeviceRepository } from '@pocket-mqtt/db';
 import { verifyDeviceToken, generateTokenLookup } from '@pocket-mqtt/core';
+import { rewriteTopic } from './topic-rewriter.js';
 
 /**
- * Setup MQTT authentication hooks for device token validation.
- * Implements single-credential device-token authentication as per ARCHITECTURE.md.
+ * Setup MQTT authentication hooks for device token validation and multi-tenant topic isolation.
  * 
- * Devices authenticate using only their token as the username (no password required).
- * The token is used to look up the device via HMAC-based tokenLookup, and then
- * verified against the stored tokenHash using constant-time comparison.
+ * Authentication:
+ * - Implements single-credential device-token authentication as per ARCHITECTURE.md
+ * - Devices authenticate using only their token as the username (no password required)
+ * - Token is verified using constant-time comparison to prevent timing attacks
  * 
- * Security: Tokens are verified against hashed values stored in the database
- * using constant-time comparison to prevent timing attacks.
+ * Topic Isolation:
+ * - All topics are rewritten to include tenant prefix: tenants/{tenantId}/{originalTopic}
+ * - MQTT reserved topics ($SYS/, $share/, $queue/) are blocked completely
+ * - Client-supplied tenant segments are treated as normal subtopics within the tenant's namespace
+ * - This ensures complete tenant isolation regardless of wildcards or malicious attempts
  * 
  * @param aedes - Aedes MQTT broker instance
  */
@@ -71,10 +75,41 @@ export function setupMQTTAuthentication(aedes: Aedes): void {
     }
   };
 
-  // Authorize publish hook - validates device can publish to topic
-  aedes.authorizePublish = async (_client: Client | null, _packet: PublishPacket, callback: (error?: Error | null) => void) => {
-    // Allow publish if client is authenticated
-    // Additional authorization logic could be added here (e.g., topic-based permissions)
-    callback(null);
+  // Authorize publish hook - rewrites topics for multi-tenant isolation
+  aedes.authorizePublish = async (client: Client | null, packet: PublishPacket, callback: (error?: Error | null) => void) => {
+    // Ensure client is authenticated and has tenantId
+    const tenantId = (client as any)?.tenantId;
+    if (!tenantId) {
+      callback(new Error('Unauthenticated client'));
+      return;
+    }
+
+    try {
+      // Rewrite topic to include tenant prefix and block reserved topics
+      packet.topic = rewriteTopic(packet.topic, tenantId);
+      callback(null);
+    } catch (error) {
+      // Reject reserved MQTT topics or other errors
+      callback(error instanceof Error ? error : new Error(String(error)));
+    }
+  };
+
+  // Authorize subscribe hook - rewrites topics for multi-tenant isolation
+  aedes.authorizeSubscribe = async (client: Client | null, subscription: Subscription, callback: (error: Error | null, subscription?: Subscription | null) => void) => {
+    // Ensure client is authenticated and has tenantId
+    const tenantId = (client as any)?.tenantId;
+    if (!tenantId) {
+      callback(new Error('Unauthenticated client'));
+      return;
+    }
+
+    try {
+      // Rewrite topic to include tenant prefix and block reserved topics
+      subscription.topic = rewriteTopic(subscription.topic, tenantId);
+      callback(null, subscription);
+    } catch (error) {
+      // Reject reserved MQTT topics or other errors
+      callback(error instanceof Error ? error : new Error(String(error)), null);
+    }
   };
 }
