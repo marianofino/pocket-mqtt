@@ -51,7 +51,8 @@ export class TelemetryService {
    */
   async addMessage(topic: string, payload: string, tenantId: number): Promise<void> {
     if (!this.isRunning) {
-      throw new Error('TelemetryService is stopped');
+      // Silently ignore incoming messages once stopped to allow graceful broker shutdown
+      return;
     }
 
     if (typeof tenantId !== 'number' || tenantId < 1) {
