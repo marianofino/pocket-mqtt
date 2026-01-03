@@ -253,7 +253,7 @@ describe('Multi-Tenant Topic Isolation Integration', () => {
 
         subscriberClient.on('connect', () => {
           // Try to subscribe to $SYS/ topic (this should fail)
-          subscriberClient.subscribe('#', (err) => {
+          subscriberClient.subscribe('#', () => {
             // Subscription to # should work (but within tenant namespace)
             // Now publisher will try to publish to $SYS/
           });
@@ -406,7 +406,7 @@ describe('Multi-Tenant Topic Isolation Integration', () => {
           checkBothReady();
         });
 
-        clientA.on('message', (topic, payload) => {
+        clientA.on('message', (_topic, payload) => {
           // Client A should NOT receive messages from tenant B
           // Messages from B would be on tenants/B/... which A cannot access
           const data = JSON.parse(payload.toString());
@@ -454,7 +454,7 @@ describe('Multi-Tenant Topic Isolation Integration', () => {
           });
         });
 
-        clientA.on('message', (topic, payload) => {
+        clientA.on('message', (topic) => {
           // The topic should be rewritten to tenants/A/tenants/B/devices/steal
           // which is isolated within tenant A's namespace
           const expectedTopic = `tenants/${deviceA.tenantId}/tenants/${deviceB.tenantId}/devices/steal`;
@@ -503,7 +503,7 @@ describe('Multi-Tenant Topic Isolation Integration', () => {
           });
         });
 
-        client.on('message', (topic, payload) => {
+        client.on('message', (topic) => {
           messagesReceived++;
           
           // Verify topic is within tenant's namespace
@@ -559,7 +559,7 @@ describe('Multi-Tenant Topic Isolation Integration', () => {
           });
         });
 
-        client.on('message', (topic, payload) => {
+        client.on('message', (topic) => {
           messagesReceived++;
           
           // Verify all topics are within tenant's namespace

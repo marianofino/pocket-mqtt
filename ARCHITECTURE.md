@@ -54,6 +54,7 @@ apps/api, apps/mqtt-broker
 - **Multi-DB:** Repository pattern abstracts SQLite (default) and Postgres (`DB_ADAPTER=postgres`).
 - **Validation:** Zod rejects malformed MQTT payloads early.
 - **Auth:** Device-token for MQTT; JWT for REST.
+- **Multi-Tenant Isolation:** Transparent topic rewriting ensures complete tenant separation; MQTT reserved topics fully blocked.
 - **Performance:** SQLite WAL; Postgres pooling; telemetry batching (2s/100 msgs) in TelemetryService.
 - **TypeScript:** Strict + composite project refs with shared aliases.
 
@@ -99,9 +100,26 @@ All packages follow consistent standards:
   - Unauthorized connections are refused
   - **Internal DeviceId:** Stable identifier maintained for audit logs, ACLs, and topic resolution
 
-- **Authorization Hook:** Controls publish permissions
-  - Currently allows all authenticated devices to publish
-  - Extensible for topic-based permissions
+- **Multi-Tenant Topic Isolation:** Enforces strict tenant boundaries at the broker level
+  - **Topic Rewriting:** All MQTT topics are transparently rewritten to include tenant prefix
+    - Client sends: `devices/foo/telemetry`
+    - Broker rewrites to: `tenants/{tenantId}/devices/foo/telemetry`
+    - Client-supplied tenant segments are treated as normal subtopics (e.g., `tenants/999/...` becomes `tenants/{authTenantId}/tenants/999/...`)
+  - **MQTT Reserved Topic Blocking:** Complete blocking of MQTT reserved topics (no whitelist)
+    - `$SYS/` - System topics blocked
+    - `$share/` - Shared subscriptions blocked
+    - `$queue/` - Queue subscriptions blocked
+  - **Security Guarantees:**
+    - Complete tenant isolation - impossible to access other tenants' data
+    - Protection against topic confusion attacks
+    - Wildcard subscriptions (`+`, `#`) are scoped to tenant namespace only
+  - **Developer Experience:** Clients use simple topic names without tenant prefixes
+  - Implementation: `packages/mqtt-broker/src/topic-rewriter.ts` and authorization hooks
+
+- **Authorization Hooks:** Controls publish and subscribe permissions
+  - `authorizePublish`: Rewrites topics and blocks reserved topics before publishing
+  - `authorizeSubscribe`: Rewrites topics and blocks reserved topics before subscribing
+  - Extensible for additional topic-based permissions
 
 ### REST API Security (JWT Authentication)
 
