@@ -140,6 +140,49 @@ describe('MQTT Authentication Integration', () => {
       });
     });
 
+    it('should reject connection with password (even if token is valid)', () => {
+      return new Promise<void>((resolve, reject) => {
+        const client = mqtt.connect(`mqtt://localhost:${port}`, {
+          clientId: 'test-client-with-password',
+          username: testDevice.token,
+          password: 'any-password', // Should be rejected even with valid token
+          clean: true,
+          reconnectPeriod: 0,
+        });
+
+        client.on('connect', () => {
+          client.end();
+          reject(new Error('Should not have connected with password provided'));
+        });
+
+        client.on('error', () => {
+          client.end();
+          resolve();
+        });
+      });
+    });
+
+    it('should reject connection without username', () => {
+      return new Promise<void>((resolve, reject) => {
+        const client = mqtt.connect(`mqtt://localhost:${port}`, {
+          clientId: 'test-client-no-username',
+          // No username provided
+          clean: true,
+          reconnectPeriod: 0,
+        });
+
+        client.on('connect', () => {
+          client.end();
+          reject(new Error('Should not have connected without username'));
+        });
+
+        client.on('error', () => {
+          client.end();
+          resolve();
+        });
+      });
+    });
+
     it('should reject invalid token in single-credential mode', () => {
       return new Promise<void>((resolve, reject) => {
         const client = mqtt.connect(`mqtt://localhost:${port}`, {
@@ -156,6 +199,46 @@ describe('MQTT Authentication Integration', () => {
 
         client.on('error', () => {
           client.end();
+          resolve();
+        });
+      });
+    });
+
+    it('should reject expired token', async () => {
+      // Create a device with an expired token
+      const deviceRepo = createDeviceRepository();
+      const expiredToken = 'expired-test-token-789';
+      const tokenHash = await hashDeviceToken(expiredToken);
+      const tokenLookup = generateTokenLookup(expiredToken);
+      
+      const expiredDevice = await deviceRepo.create({
+        tenantId: testDevice.tenantId,
+        deviceId: 'expired-device-001',
+        tokenHash,
+        tokenLookup,
+        name: 'Expired Device',
+        labels: null,
+        notes: null,
+        expiresAt: new Date(Date.now() - 1000 * 60 * 60), // Expired 1 hour ago
+      });
+
+      return new Promise<void>((resolve, reject) => {
+        const client = mqtt.connect(`mqtt://localhost:${port}`, {
+          clientId: 'test-client-expired-token',
+          username: expiredToken,
+          clean: true,
+          reconnectPeriod: 0,
+        });
+
+        client.on('connect', () => {
+          client.end();
+          reject(new Error('Should not have connected with expired token'));
+        });
+
+        client.on('error', async () => {
+          client.end();
+          // Clean up the expired device
+          await deviceRepo.delete(expiredDevice.id);
           resolve();
         });
       });
