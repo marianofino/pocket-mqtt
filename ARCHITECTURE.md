@@ -96,9 +96,11 @@ All packages follow consistent standards:
   - **Token Storage:**
     - `tokenHash`: Salted scrypt hash for verification (prevents rainbow table attacks)
     - `tokenLookup`: HMAC-SHA256(secret_key, token) for efficient device lookup in single-credential mode
+    - `TOKEN_LOOKUP_SECRET` environment variable is **required in production** for security
   - Expired tokens are automatically rejected
   - Unauthorized connections are refused
   - **Internal DeviceId:** Stable identifier maintained for audit logs, ACLs, and topic resolution
+  - **Migration Note:** Existing devices from pre-tokenLookup versions need token regeneration to use single-credential mode
 
 - **Authorization Hook:** Controls publish permissions
   - Currently allows all authenticated devices to publish

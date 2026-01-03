@@ -2,12 +2,25 @@ import { createHmac } from 'node:crypto';
 
 /**
  * Secret key for HMAC token lookup generation.
- * In production, this should be loaded from environment variables or secure configuration.
- * For now, we use a constant key as per the initial implementation requirement.
  * 
- * TODO: Move to environment configuration in future PR
+ * SECURITY: This MUST be set via the TOKEN_LOOKUP_SECRET environment variable in production.
+ * The secret should be:
+ * - At least 32 bytes of cryptographically secure random data
+ * - Stored securely (e.g., in a secrets manager or secure environment variables)
+ * - Never committed to source control
+ * 
+ * For development and testing, a default value is provided, but this should NEVER be used in production.
  */
-const HMAC_SECRET_KEY = process.env.TOKEN_LOOKUP_SECRET || 'pocket-mqtt-token-lookup-secret-key';
+const HMAC_SECRET_KEY = process.env.TOKEN_LOOKUP_SECRET || (() => {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'TOKEN_LOOKUP_SECRET environment variable is required in production. ' +
+      'Generate a secure secret with: openssl rand -hex 32'
+    );
+  }
+  // Development/test fallback only
+  return 'pocket-mqtt-token-lookup-secret-key-INSECURE-DEV-ONLY';
+})();
 
 /**
  * Generate a deterministic lookup key for a device token using HMAC-SHA256.

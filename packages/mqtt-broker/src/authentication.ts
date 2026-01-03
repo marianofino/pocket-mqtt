@@ -37,7 +37,7 @@ export function setupMQTTAuthentication(aedes: Aedes): void {
     }
 
     try {
-      let deviceTokenRecord: { deviceId: string; tokenHash: string; expiresAt: Date | null; tenantId: number } | undefined;
+      let deviceTokenRecord: { deviceId: string; tokenHash: string; tokenLookup: string; expiresAt: Date | null; tenantId: number } | undefined;
 
       // Single-credential mode: username is token, no password
       if (!password) {
@@ -51,14 +51,14 @@ export function setupMQTTAuthentication(aedes: Aedes): void {
             .from(deviceTokenSchemaPg)
             .where(eq(deviceTokenSchemaPg.tokenLookup, tokenLookup))
             .limit(1);
-          deviceTokenRecord = results[0];
+          deviceTokenRecord = results[0] as { deviceId: string; tokenHash: string; tokenLookup: string; expiresAt: Date | null; tenantId: number } | undefined;
         } else {
           const db = getDbClient() as SqliteDbClient;
           const results = await db.select()
             .from(deviceTokenSchema)
             .where(eq(deviceTokenSchema.tokenLookup, tokenLookup))
             .limit(1);
-          deviceTokenRecord = results[0];
+          deviceTokenRecord = results[0] as { deviceId: string; tokenHash: string; tokenLookup: string; expiresAt: Date | null; tenantId: number } | undefined;
         }
 
         if (!deviceTokenRecord) {
@@ -84,14 +84,14 @@ export function setupMQTTAuthentication(aedes: Aedes): void {
             .from(deviceTokenSchemaPg)
             .where(eq(deviceTokenSchemaPg.deviceId, deviceId))
             .limit(1);
-          deviceTokenRecord = results[0];
+          deviceTokenRecord = results[0] as { deviceId: string; tokenHash: string; tokenLookup: string; expiresAt: Date | null; tenantId: number } | undefined;
         } else {
           const db = getDbClient() as SqliteDbClient;
           const results = await db.select()
             .from(deviceTokenSchema)
             .where(eq(deviceTokenSchema.deviceId, deviceId))
             .limit(1);
-          deviceTokenRecord = results[0];
+          deviceTokenRecord = results[0] as { deviceId: string; tokenHash: string; tokenLookup: string; expiresAt: Date | null; tenantId: number } | undefined;
         }
 
         if (!deviceTokenRecord) {
