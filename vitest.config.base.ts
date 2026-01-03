@@ -16,14 +16,6 @@ export default defineConfig({
       '@pocket-mqtt/telemetry-service': resolvePath('./packages/telemetry-service/src/index.ts'),
       '@pocket-mqtt/mqtt-broker': resolvePath('./packages/mqtt-broker/src/index.ts'),
       '@pocket-mqtt/api': resolvePath('./packages/api/src/index.ts'),
-
-      // TODO: Remove legacy aliases by v2.0.0 (deprecated as of 2026-01)
-      // Legacy aliases kept temporarily for backward compatibility
-      '@pocket/core': resolvePath('./packages/core/src/index.ts'),
-      '@pocket/db': resolvePath('./packages/db/src/index.ts'),
-      '@pocket/telemetry-service': resolvePath('./packages/telemetry-service/src/index.ts'),
-      '@pocket/mqtt-broker': resolvePath('./packages/mqtt-broker/src/index.ts'),
-      '@pocket/api': resolvePath('./packages/api/src/index.ts'),
     },
   },
   test: {

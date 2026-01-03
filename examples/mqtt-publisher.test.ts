@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { publishExample } from './mqtt-publisher';
 
-type MockHandlerMap = Map<string, (...args: any[]) => void>;
+type MockHandlerMap = Map<string, (...args: unknown[]) => void>;
 
 type MockClient = {
   on: ReturnType<typeof vi.fn>;
@@ -20,7 +20,7 @@ const createMockClient = (handlers: MockHandlerMap): MockClient => {
   });
 
   const client: MockClient = {
-    on: vi.fn((event: string, cb: (...args: any[]) => void) => {
+    on: vi.fn((event: string, cb: (...args: unknown[]) => void) => {
       handlers.set(event, cb);
       return client;
     }),
